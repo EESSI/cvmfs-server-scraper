@@ -12,9 +12,9 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = 'cvmfs-server-metadata'
-DESCRIPTION = 'Gather metadata from CVMFS Stratum servers.'
-URL = 'https://github.com/terjekv/cvmfs-server-metadata'
+NAME = 'cvmfs-server-scraper'
+DESCRIPTION = 'Scrape metadata from CVMFS Stratum servers.'
+URL = 'https://github.com/terjekv/cvmfs-server-scraper'
 EMAIL = 'terje@kvernes.no'
 AUTHOR = 'Terje Kvernes'
 REQUIRES_PYTHON = '>=3.6.0'
