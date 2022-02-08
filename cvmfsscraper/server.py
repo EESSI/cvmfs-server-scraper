@@ -41,16 +41,15 @@ class Server:
     def process_repositories_json(self, json_data):
         repos_info = json.loads(json_data)
         if 'replicas' in repos_info:
-            self.server_type = 1
             for repo_info in repos_info['replicas']:
+                self.server_type = 1
                 if self.process_repo(repo_info):
                     # use "str" to convert from unicode to string
                     self.repositories.append( Repository( self, repo_info["name"], str(repo_info["url"])) )
 
         if 'repositories' in repos_info:
-            self.server_type = 0
-
             for repo_info in repos_info['repositories']:
+                self.server_type = 0
                 if self.process_repo(repo_info):
                     self.repositories.append( Repository( self, repo_info["name"], str(repo_info["url"])) )
 
