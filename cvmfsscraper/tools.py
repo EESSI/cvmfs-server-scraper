@@ -10,7 +10,7 @@ def fetch(object, server, path):
             content = content.decode("UTF-8")
         return content
     except Exception as e:
-        print(e)
+        print(url, e)
         object.fetch_errors.append({
             "path", path,
             "error", e

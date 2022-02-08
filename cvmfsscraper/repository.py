@@ -9,6 +9,9 @@ class Repository:
         self.name = name
         self.path = url
 
+        self.last_gc = None
+        self.last_snapshot = None
+
         # 1. Get data per repo:
         #  a. {url}/.cvmfspublished : Overall data
         #  b. {url}/.cvmfs_status.json
@@ -25,9 +28,15 @@ class Repository:
         if not json_data:
             return
 
-        repo_status = json.loads(json_data)
+        try:
+            repo_status = json.loads(json_data)
+        except Exception as e:
+            print(e)
+
         timeformat = "%a %b %d %H:%M:%S %Z %Y"
-        self.last_snapshot = datetime.datetime.strptime(repo_status["last_snapshot"], timeformat).timestamp()
+
+        if "last_snapshot" in repo_status:
+            self.last_snapshot = datetime.datetime.strptime(repo_status["last_snapshot"], timeformat).timestamp()
         self.last_gc = datetime.datetime.strptime(repo_status["last_gc"], timeformat).timestamp()
 
     def parse_cvmfspublished(self, content):
