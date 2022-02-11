@@ -19,11 +19,15 @@ servers = scrape(
     ],
 )
 
-print(servers[0])
-
-for repo in servers[0].repositories:
-    print("Repo: " + repo.name )
-    print("Root size: " + repo.root_size)
-    print("Revision: " + repo.revision)
-    print("Revision timestamp: " + repo.revision_timestamp)
-    print("Last snapshot: " + str(repo.last_snapshot))
+print("Servers:")
+for server in servers:
+    print(server.name)
+    print("  GeoAPI status: " + str(server.geoapi_status))
+    print("  Repositories: ")
+    for repo in server.repositories:
+        print("   - " + repo.name)
+        print("    : Root size: " + repo.root_size)
+        print("    : Revision: " + repo.revision)
+        print("    : Revision timestamp: " + repo.revision_timestamp)
+        print("    : Last snapshot: " + str(repo.last_snapshot))
+    print()
