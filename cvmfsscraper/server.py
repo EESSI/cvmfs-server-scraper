@@ -93,9 +93,9 @@ class Server:
             response = urllib.request.urlopen(request)
             output = response.read().decode('utf-8').strip()
             if output == '2,1,3':
-                return 1
-            else:
                 return 0
+            else:
+                return 1
         except Exception as e:
             return 2
 
