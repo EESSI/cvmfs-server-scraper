@@ -14,7 +14,7 @@ from setuptools import find_packages, setup, Command
 # Package meta-data.
 NAME = 'cvmfs-server-scraper'
 DESCRIPTION = 'Scrape metadata from CVMFS Stratum servers.'
-URL = 'https://github.com/terjekv/cvmfs-server-scraper'
+URL = 'https://github.com/eessi/cvmfs-server-scraper'
 EMAIL = 'terje@kvernes.no'
 AUTHOR = 'Terje Kvernes'
 REQUIRES_PYTHON = '>=3.6.0'
@@ -22,6 +22,7 @@ VERSION = '0.0.1'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
+    "prometheus_client",
     # 'requests', 'maya', 'records',
 ]
 
