@@ -4,7 +4,6 @@ import os
 import time
 from prometheus_client import start_http_server, Gauge, Counter
 from cvmfsscraper.main import scrape
-import requests
 
 class EESSIMetrics:
     """
