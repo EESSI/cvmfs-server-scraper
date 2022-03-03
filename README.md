@@ -155,7 +155,7 @@ These attributes are populated from `cvmfs_status.json`:
 | last_gc | Timestamp of last garbage collection |
 | last_snapshot | Timestamp of the last snapshot |
 
-Information from `.cvmfspublished` is also provided. For explanations for these keys, please see CMVFS' [official documentation](https://cvmfs.readthedocs.io/en/stable/cpt-details.html). The field value in the table is the field key from `.cvmfspublished`.
+Information from `.cvmfspublished` is also provided. For explanations for these keys, please see CVMFS' [official documentation](https://cvmfs.readthedocs.io/en/stable/cpt-details.html). The field value in the table is the field key from `.cvmfspublished`.
 
 | Attribute | Field |
 | --- | --- |
