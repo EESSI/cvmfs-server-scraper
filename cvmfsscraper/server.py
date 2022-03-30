@@ -10,18 +10,24 @@ from cvmfsscraper.repository import Repository
 from cvmfsscraper.tools import fetch
 
 class Server:
-    def __init__(self, server, repos, ignore_repos):
+    def __init__(self, server, repos, ignore_repos, type=None):
 
         # 1. Get repos from server:
         # /cvmfs/info/v1/repositories.json
 
         self.name = server
+        self.server_type = type
+        self.geoapi_status = 9
         self.forced_repositories = repos
         self.ignored_repositories = ignore_repos
 
+        self._is_down = 1
+
         self.fetch_errors = []
         self.repositories = self.populate_repositories()
-        self.geoapi_status = self.check_geoapi_status()
+
+        if not self.fetch_errors:
+            self.geoapi_status = self.check_geoapi_status()
 
     def __str__(self):
         content = "Server: " + self.name + "\n"
@@ -30,9 +36,17 @@ class Server:
             content += "  - " + repo.name + "\n"
         return content
 
+    def is_down(self):
+        return self._is_down
 
     def populate_repositories(self):
         content = fetch(self, self.name, "cvmfs/info/v1/repositories.json")
+
+        if self.fetch_errors:
+            self._is_down = 1
+            return []
+
+        self._is_down = 0
 
         if content:
             return self.process_repositories_json(content)
