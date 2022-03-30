@@ -12,6 +12,9 @@ class Repository:
         self.last_gc = None
         self.last_snapshot = None
 
+        self._repo_status_loaded = 0
+        self._cvmfspublished_loaded = 0
+
         # 1. Get data per repo:
         #  a. {url}/.cvmfspublished : Overall data
         #  b. {url}/.cvmfs_status.json
@@ -30,6 +33,7 @@ class Repository:
 
         try:
             repo_status = json.loads(json_data)
+            self._repo_status_loaded = 1
         except Exception as e:
             print(e)
 
@@ -37,7 +41,9 @@ class Repository:
 
         if "last_snapshot" in repo_status:
             self.last_snapshot = datetime.datetime.strptime(repo_status["last_snapshot"], timeformat).timestamp()
-        self.last_gc = datetime.datetime.strptime(repo_status["last_gc"], timeformat).timestamp()
+
+        if "last_gc" in repo_status:
+            self.last_gc = datetime.datetime.strptime(repo_status["last_gc"], timeformat).timestamp()
 
     def parse_cvmfspublished(self, content):
         """Parses a repositories .cvmfspublished
@@ -46,6 +52,8 @@ class Repository:
 
         if not content:
             return
+
+        self._cvmfspublished_loaded = 1
 
         signature_inc = False
         self.signature = bytes()
