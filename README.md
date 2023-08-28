@@ -14,7 +14,7 @@ And then for every repo it finds (that it's not told to ignore), it grabs:
 ````python
 #!/usr/bin/env python3
 
-from cvmfsscraper.main import scrape, scrape_server
+from cvmfsscraper import scrape, scrape_server
 
 # server = scrape_server("aws-eu-west1.stratum1.cvmfs.eessi-infra.org")
 
@@ -40,7 +40,7 @@ for repo in servers[0].repositories:
 
 # Data structure
 
-## Server 
+## Server
 
 A server object, representing a specific server that has been scraped.
 
@@ -50,7 +50,7 @@ server_one = servers[0]
 ````
 
 ### Name
- 
+
 #### Type: Attribute
 
 `server.name`
@@ -58,7 +58,6 @@ server_one = servers[0]
 #### Returns
 
 The name of the server, usually its fully qualified domain name.
-
 
 ### GeoApi status
 
@@ -75,13 +74,14 @@ An integer value within `[0, 1, 2, 9]`, with the following meaning:
 - 2 : No response
 - 9 : The server has no repository available so the GeoApi cannot be tested
 
-### Repositories 
+### Repositories
 
 #### Type: attribute
 
 `server.repositories`
 
 #### Returns
+
 A list of repository objects, empty if no repositores are scraped on the server.
 
 ### Ignored repositories
@@ -90,7 +90,7 @@ A list of repository objects, empty if no repositores are scraped on the server.
 
 `server.ignored_repositories`
 
-#### Returns:
+#### Returns
 
 List of repositories names that are to be ignored by the scraper.
 
@@ -133,7 +133,6 @@ The fully qualified name of the repository.
 
 The server object to which the repository belongs.
 
-
 ### Path
 
 #### Type: Attribute
@@ -146,7 +145,7 @@ The path for the repository on the server. May differ from the name. To get a co
 
 `url = "http://" + repo_one.server.name + repo_one.path`
 
-### Status attributes:
+### Status attributes
 
 These attributes are populated from `cvmfs_status.json`:
 
