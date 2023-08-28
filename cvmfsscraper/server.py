@@ -124,6 +124,8 @@ class CVMFSServer:
     def process_repositories_json(self, json_data: str) -> List[Repository]:
         """Process the repositories.json file.
 
+        Note that this file also contains metadata about the server.
+
         :param json_data: The content of the repositories.json file.
 
         :return: List of repositories.
@@ -153,6 +155,13 @@ class CVMFSServer:
         return repos
 
     def process_repo(self, repo_info: Dict[str, Any]) -> bool:
+        """Check to see if a repository should be processed.
+
+        :param repo_info: The repository information.
+
+        :return: True if the repository should be processed, False otherwise.
+        """
+
         repo_name = repo_info["name"]
         if self.forced_repositories and repo_name not in self.forced_repositories:
             return False
