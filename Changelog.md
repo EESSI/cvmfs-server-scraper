@@ -19,6 +19,10 @@
 - Importing `scrape` or `scrape_server` from `cvmfsserver.main` will print a warning about deprecation.
 - GeoAPI status is now an enum of type GeoAPIStatus, with values `GeoAPIStatus.OK`, `GeoAPIStatus.NOT_FOUND` (no repositories available), `GeoAPIStatus.LOCATION_ERROR` (location could not be determined), and `GeoAPIStatus.NO_RESPONSE` (other error).
 
+### Removed
+
+- Removed support for setting `forced_repositories` on a server as it served no purpose.
+
 ## [0.1.0] - 2022-04-05
 
 ### Initial release

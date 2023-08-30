@@ -28,6 +28,7 @@ servers = scrape(
     ],
 )
 
+# Note that the order of servers is undefined.
 print(servers[0])
 
 for repo in servers[0].repositories:
@@ -67,12 +68,13 @@ The name of the server, usually its fully qualified domain name.
 
 #### Returns
 
-An integer value within `[0, 1, 2, 9]`, with the following meaning:
+A GeoAPIstatus enum object. Defined in `constants.py`. The possible values are:
 
-- 0 : OK
-- 1 : GeoApi gives wrong location
-- 2 : No response
-- 9 : The server has no repository available so the GeoApi cannot be tested
+- OK (0: OK)
+- LOCATION_ERROR (1: GeoApi gives wrong location)
+- NO_RESPONSE (2: No response)
+- NOT_FOUND (9: The server has no repository available so the GeoApi cannot be tested)
+- NOT_YET_TESTED (99: The server has not yet been tested)
 
 ### Repositories
 
@@ -82,7 +84,7 @@ An integer value within `[0, 1, 2, 9]`, with the following meaning:
 
 #### Returns
 
-A list of repository objects, empty if no repositores are scraped on the server.
+A list of repository objects, sorted by name. Empty if no repositores are scraped on the server.
 
 ### Ignored repositories
 
