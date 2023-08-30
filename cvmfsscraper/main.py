@@ -1,32 +1,24 @@
-# -*- coding: utf-8 -*-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from importlib.resources import Package
-from time import time
+"""Legacy API support for cvmfsscraper."""
 
-from cvmfsscraper.server import Server
+from typing import Any, Dict
 
-def scrape_server(server=None, repos=[], ignore_repos=[], type=None):
-    """ Scrape a specific server """
+from cvmfsscraper import scrape as scrape_proper
+from cvmfsscraper import scrape_server as scrape_server_proper
+from cvmfsscraper.server import CVMFSServer
+from cvmfsscraper.tools import deprecated
 
-    s = Server(server, repos, ignore_repos, type)
-    return s
+def scrape(*args: Any, **kwargs: Dict[str, Any]) -> CVMFSServer:
+    """Legacy API support for cvmfsscraper."""
+    deprecated(
+        "cvmfsserver.main.scrape",
+        "cvmfsserver.scrape",
+    )
+    return scrape_proper(*args, **kwargs)
 
-
-def scrape(stratum0=[], stratum1=[], repos=[], ignore_repos=[]):
-    """
-    Scrape a set of servers
-    """
-
-    server_objects = []
-    processes = []
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        for server in stratum1:
-            processes.append(executor.submit(scrape_server, server, repos, ignore_repos, 1))
-        for server in stratum0:
-            processes.append(executor.submit(scrape_server, server, repos, ignore_repos, 0))
-
-    for task in as_completed(processes):
-        server_objects.append(task.result())
-
-    return server_objects
+def scrape_server(*args: Any, **kwargs: Dict[str, Any]) -> CVMFSServer:
+    """Legacy API support for cvmfsscraper."""
+    deprecated(
+        "cvmfsserver.main.scrape_server",
+        "cvmfsserver.scrape_server",
+    )
+    return scrape_server_proper(*args, **kwargs)

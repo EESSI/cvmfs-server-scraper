@@ -14,7 +14,7 @@ And then for every repo it finds (that it's not told to ignore), it grabs:
 ````python
 #!/usr/bin/env python3
 
-from cvmfsscraper.main import scrape, scrape_server
+from cvmfsscraper import scrape, scrape_server
 
 # server = scrape_server("aws-eu-west1.stratum1.cvmfs.eessi-infra.org")
 
@@ -28,6 +28,7 @@ servers = scrape(
     ],
 )
 
+# Note that the order of servers is undefined.
 print(servers[0])
 
 for repo in servers[0].repositories:
@@ -40,7 +41,7 @@ for repo in servers[0].repositories:
 
 # Data structure
 
-## Server 
+## Server
 
 A server object, representing a specific server that has been scraped.
 
@@ -50,7 +51,7 @@ server_one = servers[0]
 ````
 
 ### Name
- 
+
 #### Type: Attribute
 
 `server.name`
@@ -58,7 +59,6 @@ server_one = servers[0]
 #### Returns
 
 The name of the server, usually its fully qualified domain name.
-
 
 ### GeoApi status
 
@@ -68,21 +68,23 @@ The name of the server, usually its fully qualified domain name.
 
 #### Returns
 
-An integer value within `[0, 1, 2, 9]`, with the following meaning:
+A GeoAPIstatus enum object. Defined in `constants.py`. The possible values are:
 
-- 0 : OK
-- 1 : GeoApi gives wrong location
-- 2 : No response
-- 9 : The server has no repository available so the GeoApi cannot be tested
+- OK (0: OK)
+- LOCATION_ERROR (1: GeoApi gives wrong location)
+- NO_RESPONSE (2: No response)
+- NOT_FOUND (9: The server has no repository available so the GeoApi cannot be tested)
+- NOT_YET_TESTED (99: The server has not yet been tested)
 
-### Repositories 
+### Repositories
 
 #### Type: attribute
 
 `server.repositories`
 
 #### Returns
-A list of repository objects, empty if no repositores are scraped on the server.
+
+A list of repository objects, sorted by name. Empty if no repositores are scraped on the server.
 
 ### Ignored repositories
 
@@ -90,7 +92,7 @@ A list of repository objects, empty if no repositores are scraped on the server.
 
 `server.ignored_repositories`
 
-#### Returns:
+#### Returns
 
 List of repositories names that are to be ignored by the scraper.
 
@@ -133,7 +135,6 @@ The fully qualified name of the repository.
 
 The server object to which the repository belongs.
 
-
 ### Path
 
 #### Type: Attribute
@@ -146,7 +147,7 @@ The path for the repository on the server. May differ from the name. To get a co
 
 `url = "http://" + repo_one.server.name + repo_one.path`
 
-### Status attributes:
+### Status attributes
 
 These attributes are populated from `cvmfs_status.json`:
 

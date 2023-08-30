@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "last_geodb_update": "Mon Jan 2 02:04:03 UTC 2023",
+  "cvmfs_version": "2.10.0-1",
+  "os_id": "rocky",
+  "os_version_id": "8.7",
+  "os_pretty_name": "Rocky Linux 8.7 (Green Obsidian)",
+  "repositories": [],
+  "replicas": [
+    {
+      "name": "test",
+      "url": "/cvmfs/test"
+    },
+    {
+      "name": "data",
+      "url": "/cvmfs/data"
+    }
+  ]
+}
