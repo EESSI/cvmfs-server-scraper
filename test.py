@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Proof of concept EESSI test script."""
 
 from cvmfsscraper import scrape
 
@@ -27,7 +28,7 @@ for server in servers:
     print(server.name)
     print("  GeoAPI status: " + str(server.geoapi_status))
     print("  Metadata:")
-    for key, value in server.metadata.items():
+    for key, value in sorted(server.metadata.items(), key=lambda x: x[1]):
         print("   - " + key + ": " + value)
     print("  Repositories: ")
     for repo in server.repositories:
@@ -36,4 +37,8 @@ for server in servers:
         print("    : Revision: " + repo.revision)
         print("    : Revision timestamp: " + repo.revision_timestamp)
         print("    : Last snapshot: " + str(repo.last_snapshot))
+        print("    ---")
+        for key, attr in sorted(repo.attribute_mapping().items(), key=lambda x: x[1]):
+            print("    : (" + key + ") " + attr + ": " + repo.attribute(key))
+
     print()

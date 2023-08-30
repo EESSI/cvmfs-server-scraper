@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "last_geodb_update": "Tue Aug 29 10:00:03 UTC 2023",
+  "cvmfs_version": "2.10.0-1",
+  "os_id": "rhel",
+  "os_version_id": "8.4",
+  "os_pretty_name": "Red Hat Enterprise Linux 8.4 (Ootpa)",
+  "repositories": [],
+  "replicas": [
+    {
+      "name": "test",
+      "url": "/cvmfs/test"
+    },
+    {
+      "name": "data",
+      "url": "/cvmfs/data"
+    }
+  ]
+}

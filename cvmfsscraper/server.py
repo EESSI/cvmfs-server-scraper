@@ -1,29 +1,27 @@
-"""
-Server class for cvmfs-server-metadata
-"""
+"""Server class for cvmfs-server-metadata."""
 
 import json
-import urllib
 from typing import Any, Dict, List
 
 from cvmfsscraper.constants import GeoAPIStatus
 from cvmfsscraper.repository import Repository
-from cvmfsscraper.tools import fetch
+from cvmfsscraper.tools import fetch, fetch_absolute
 
 
 class CVMFSServer:
+    """Base class for CVMFS servers."""
+
     def __init__(
         self,
         server: str,
         repos: List[str],
         ignore_repos: List[str],
-        is_stratum0: bool = False,
         scrape_on_init: bool = True,
     ):
-        """Base class for stratum0 and stratum1 servers.
+        """Create a CVMFS server object.
 
         :param server: The fully qualified DNS name of the server.
-        :param repos: List of repositories to always scrape.
+        :param repos: List of repositories to always scrape. DEPRECATED, unused.
         :param ignore_repos: List of repositories to ignore.
         :param is_stratum0: Whether the server is a stratum0 server.
         """
@@ -32,16 +30,22 @@ class CVMFSServer:
 
         self.name = server
 
-        if is_stratum0:
+        self.repositories: List[Repository] = []
+
+        self.server_type = None
+
+        if isinstance(self, Stratum0Server):
             self.server_type = 0
-        else:
+        elif isinstance(self, Stratum1Server):
             self.server_type = 1
 
-        self.geoapi_status = 9
+        self.geoapi_status = GeoAPIStatus.NOT_YET_TESTED
         self.forced_repositories = repos
         self.ignored_repositories = ignore_repos
 
-        self._is_down = 1
+        self.geoapi_order = [2, 1, 3]
+
+        self._is_down = True
 
         self.metadata: Dict[str, str] = {}
 
@@ -83,23 +87,31 @@ class CVMFSServer:
 
         :returns: The fully formed GeoAPI URL as a string.
         """
+        # Note: As a feature, instead of providing an UUID or a proxy, we ca
+        # simply pass "x" as the UUID, and the GeoAPI will... work.
         base_url = "http://"
-        endpoint = "api/v1.0/geo"
+        endpoint = "api/v1.0/geo/x"
         stratum_ones = (
             "cvmfs-s1fnal.opensciencegrid.org,"
             "cvmfs-stratum-one.cern.ch,"
             "cvmfs-stratum-one.ihep.ac.cn"
         )
 
-        full_url = (
-            f"{base_url}{name}/cvmfs/{repository_name}/{endpoint}/" f"{stratum_ones}"
-        )
+        full_url = f"{base_url}{name}/cvmfs/{repository_name}/{endpoint}/{stratum_ones}"
 
         return full_url
 
-    def is_down(self):
-        """Returns whether the server is down or not."""
+    def is_down(self) -> bool:
+        """Return whether the server is down or not."""
         return self._is_down
+
+    def is_stratum0(self) -> bool:
+        """Return whether the server is a stratum0 server or not."""
+        return self.server_type == 0
+
+    def is_stratum1(self) -> bool:
+        """Return whether the server is a stratum1 server or not."""
+        return self.server_type == 1
 
     def populate_repositories(self) -> List[Repository]:
         """Populate the repositories list.
@@ -110,15 +122,16 @@ class CVMFSServer:
         """
         content = fetch(self, self.name, "cvmfs/info/v1/repositories.json")
 
-        if self.fetch_errors:
-            self._is_down = 1
+        # This needs to check the error available and probably pop it from the list
+        if self.fetch_errors:  # pragma: no cover
+            self._is_down = True
             return []
 
-        self._is_down = 0
+        self._is_down = False
 
         if content:
             return self.process_repositories_json(content)
-        else:
+        else:  # pragma: no cover
             return []
 
     def process_repositories_json(self, json_data: str) -> List[Repository]:
@@ -128,7 +141,7 @@ class CVMFSServer:
 
         :param json_data: The content of the repositories.json file.
 
-        :return: List of repositories.
+        :return: An alphabetically sorted list of repositories.
         """
         repos_info = json.loads(json_data)
         repos = []
@@ -152,7 +165,7 @@ class CVMFSServer:
             else:
                 self.metadata[key] = str(value)
 
-        return repos
+        return sorted(repos, key=lambda repo: repo.name)
 
     def process_repo(self, repo_info: Dict[str, Any]) -> bool:
         """Check to see if a repository should be processed.
@@ -161,57 +174,56 @@ class CVMFSServer:
 
         :return: True if the repository should be processed, False otherwise.
         """
-
         repo_name = repo_info["name"]
-        if self.forced_repositories and repo_name not in self.forced_repositories:
-            return False
 
         if repo_name in self.ignored_repositories:
             return False
 
-        if "pass-through" in repo_info:
+        if "pass-through" in repo_info:  # pragma: no cover
             return False
 
         return True
 
-    def check_geoapi_status(self):
-        """Checks the geoapi for the server with the first repo available.
-        Return values:
+    def check_geoapi_status(self) -> GeoAPIStatus:
+        """Check the geoapi for the server with the first repo available.
+
+        Checks against the following servers:
+            cvmfs-s1fnal.opensciencegrid.org
+            cvmfs-stratum-one.cern.ch
+            cvmfs-stratum-one.ihep.ac.cn
+
+        The code uses self.geoapi_order to determine the expected order (from closest to
+        most distant) for the servers. This defaults to [2, 1, 3], which works for
+        bits of northern Europe.
+
+        Returns a GeoAPIStatus enum, which can be one of the following values:
             0 if everything is OK
             1 if the geoapi respons, but with the wrong data
             2 if the geoapi fails to respond
-            9 if there is no repository to use for testing
+            9 if there is no repository to use for testing.
         """
         # GEOAPI only applies to stratum1s
-        if self.server_type != 1:
-            return GeoAPIStatus["OK"]
+        if self.server_type == 0:
+            return GeoAPIStatus.OK
 
-        if not self.repositories:
-            return GeoAPIStatus["NOT_FOUND"]
+        if not self.repositories:  # pragma: no cover
+            return GeoAPIStatus.NOT_FOUND
 
         url = self.get_geoapi_url(self.name, self.repositories[0].name)
 
         try:
-            request = urllib.request.Request(url)
-            response = urllib.request.urlopen(request)
-            output = response.read().decode("utf-8").strip()
-            if output == "2,1,3":
-                return GeoAPIStatus["OK"]
+            output = fetch_absolute(self, url).decode().strip()
+            if output == ",".join(str(item) for item in self.geoapi_order):
+                return GeoAPIStatus.OK
             else:
-                return GeoAPIStatus["LOCATION_ERROR"]
-        except Exception:
-            return GeoAPIStatus["NO_RESPONSE"]
+                return GeoAPIStatus.LOCATION_ERROR
+        except Exception:  # pragma: no cover
+            return GeoAPIStatus.NO_RESPONSE
 
 
 class Stratum0Server(CVMFSServer):
     """Class for stratum0 servers."""
 
-    def __init__(self, server: str, repos: List[str], ignore_repos: List[str]):
-        super().__init__(server, repos, ignore_repos, 0)
-
 
 class Stratum1Server(CVMFSServer):
     """Class for stratum1 servers."""
-
-    def __init__(self, server: str, repos: List[str], ignore_repos: List[str]):
-        super().__init__(server, repos, ignore_repos, 1)

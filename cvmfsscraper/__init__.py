@@ -19,7 +19,6 @@ def scrape_server(
     :param ignore_repos: List of repositories to ignore.
     :param is_stratum0: Whether the server is a stratum0 server.
     """
-
     cls = Stratum1Server
     if is_stratum0:
         cls = Stratum0Server
@@ -33,15 +32,13 @@ def scrape(
     repos: List[str],
     ignore_repos: List[str],
 ) -> List[CVMFSServer]:
-    """
-    Scrape a set of servers.
+    """Scrape a set of servers.
 
     :param stratum0_servers: List of stratum0 servers, DNS names.
     :param stratum1_servers: List of stratum1 servers, DNS names.
     :param repos: List of repositories to scrape.
     :param ignore_repos: List of repositories to ignore.
     """
-
     server_objects = []
     processes = []
 

@@ -10,9 +10,10 @@ class GeoAPIStatus(enum.Enum):
     LOCATION_ERROR = 1
     NO_RESPONSE = 2
     NOT_FOUND = 9
+    NOT_YET_TESTED = 99
 
     def __str__(self) -> str:
-        """Custom string representation.
+        """Provide a custom string representation.
 
         This only returns the name of the enum, not the class.
         """

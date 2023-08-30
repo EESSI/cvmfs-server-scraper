@@ -2,6 +2,7 @@
 import datetime
 import json
 import sys
+from typing import Dict
 
 from cvmfsscraper.tools import fetch
 
@@ -38,7 +39,6 @@ class Repository:
         :param name: The name of the repository.
         :param url: The URL of the repository.
         """
-
         self.server = server
         self.name = name
         self.path = url
@@ -61,14 +61,49 @@ class Repository:
         content = fetch(self, self.server.name, self.path + "/.cvmfs_status.json")
         self.parse_status_json(content)
 
+    def __str__(self) -> str:
+        """Return a string representation of the repository."""
+        return self.name
+
+    def attribute_mapping(self) -> Dict[str, str]:
+        """Return the attribute mapping."""
+        return self.KEY_TO_ATTRIBUTE_MAPPING
+
+    def attribute(self, attribute: str) -> str:
+        """Return the value of an attribute from the repository manifest.
+
+        Supports both the single character code used in .cvmfspublished and
+        and the full attribute name provided by the interal mapping.
+
+        :param attribute: The attribute to return.
+        """
+        if len(attribute) == 1:
+            attribute = self.KEY_TO_ATTRIBUTE_MAPPING.get(attribute)
+
+        return getattr(self, attribute, "None")
+
+    def attributes(self) -> Dict[str, str]:
+        """Return a dictionary of the attributes for the repository manifest.
+
+        This is parsed from .cvmfspublished.
+        """
+        attributes = {}
+        for key, attr in self.KEY_TO_ATTRIBUTE_MAPPING.items():
+            attributes[key] = getattr(self, attr, "None")
+        return attributes
+
     def parse_status_json(self, json_data: str) -> None:
+        """Parse the contents of a .cvmfs_status.json file.
+
+        :param json_data: The JSON data to parse.
+        """
         if not json_data:
             return
 
         try:
             repo_status = json.loads(json_data)
             self._repo_status_loaded = 1
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover (probably should exit)
             print("Error parsing JSON: " + str(exc))
             sys.exit(1)
 
@@ -85,10 +120,10 @@ class Repository:
             ).timestamp()
 
     def parse_cvmfspublished(self, content: str) -> None:
-        """Parses a repositories .cvmfspublished
-        https://cvmfs.readthedocs.io/en/stable/cpt-details.html#internal-manifest-structure
-        """
+        """Parse a .cvmfspublished file.
 
+        https://cvmfs.readthedocs.io/en/stable/cpt-details.html#internal-manifest-structure.
+        """
         if not content:
             return
 
