@@ -5,6 +5,8 @@ from typing import List
 
 from cvmfsscraper.server import CVMFSServer, Stratum0Server, Stratum1Server
 
+__version__ = "0.1.0"
+
 
 def scrape_server(
     dns_name: str,
