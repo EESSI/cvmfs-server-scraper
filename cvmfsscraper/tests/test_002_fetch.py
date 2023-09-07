@@ -2,7 +2,7 @@
 
 import json
 from unittest import TestCase
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from cvmfsscraper import scrape
 from cvmfsscraper.constants import GeoAPIStatus
@@ -14,11 +14,21 @@ from cvmfsscraper.tools import fetch, fetch_absolute
 from .base import ENDPOINTS, mock_urlopen
 
 
-class TestFetchAPI(TestCase):
+class MockedURLLibRequest(TestCase):
+    """An abstract class that mocks urllib.request.urlopen."""
+
+    def setUp(self) -> None:
+        """Mock urllib.request.urlopen."""
+        self.mock_urlopen = patch(
+            "urllib.request.urlopen", side_effect=mock_urlopen
+        ).start()
+        self.addCleanup(patch.stopall)
+
+
+class TestFetchAPI(MockedURLLibRequest):
     """Test fetching data over (mocked) HTTP."""
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_basic_fetching(self, mock_urlopen: MagicMock) -> None:
+    def test_basic_fetching(self) -> None:
         """Test fetching data with fetch."""
         endpoint = "http://stratum1-no.tld/cvmfs/info/v1/repositories.json"
 
@@ -33,8 +43,7 @@ class TestFetchAPI(TestCase):
         self.assertEqual(data, data_abs)
         self.assertEqual(data_slash, data_abs)
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_fetching_with_errors(self, mock_urlopen: MagicMock) -> None:
+    def test_fetching_with_errors(self) -> None:
         """Test fetching data with fetch."""
         endpoint = "http://stratum1-no.tld/cvmfs/info/v1/repositories.json.404"
         obj = Mock()
@@ -44,8 +53,7 @@ class TestFetchAPI(TestCase):
         self.assertEqual(obj.fetch_errors[0]["path"], endpoint)
         self.assertEqual(obj.fetch_errors[0]["error"].code, 404)
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_fetching_with_timeout(self, mock_urlopen: MagicMock) -> None:
+    def test_fetching_with_timeout(self) -> None:
         """Test fetching data with fetch."""
         endpoint = "http://example.com/timeout"
         obj = Mock()
@@ -56,11 +64,10 @@ class TestFetchAPI(TestCase):
         self.assertEqual(obj.fetch_errors[0]["error"].reason, "timeout")
 
 
-class TestScraping(TestCase):
+class TestScraping(MockedURLLibRequest):
     """Test scraping data from a server."""
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_stratum1_manually_scraping(self, mock_urlopen: MagicMock) -> None:
+    def test_stratum1_manually_scraping(self) -> None:
         """Test that the server can be manually scraped."""
         stratum1_no = Stratum1Server("stratum1-no.tld", [], [], scrape_on_init=False)
 
@@ -75,8 +82,7 @@ class TestScraping(TestCase):
         self.assertEqual(len(stratum1_no.repositories), 2)
         self.assertEqual(stratum1_no.geoapi_status, GeoAPIStatus.OK)
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_repo_order_and_string_value(self, mock_urlopen: MagicMock) -> None:
+    def test_repo_order_and_string_value(self) -> None:
         """Test that a scraping returns the repositories sorted by name."""
         stratum1_no = Stratum1Server("stratum1-no.tld", [], [], scrape_on_init=False)
 
@@ -89,8 +95,7 @@ class TestScraping(TestCase):
         self.assertEqual(str(stratum1_no.repositories[0]), "data")
         self.assertEqual(str(stratum1_no.repositories[1]), "test")
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_scraping_stratum0(self, mock_urlopen: MagicMock) -> None:
+    def test_scraping_stratum0(self) -> None:
         """Test that a stratum0 server can be scraped."""
         stratum0 = Stratum0Server("stratum0.tld", [], [], scrape_on_init=False)
         self.assertTrue(stratum0.is_stratum0())
@@ -104,8 +109,7 @@ class TestScraping(TestCase):
 
         self.assertEqual(stratum0.geoapi_status, GeoAPIStatus.OK)
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_server_show(self, mock_urlopen: MagicMock) -> None:
+    def test_server_show(self) -> None:
         """Test the show method of a server."""
         server = Stratum1Server("stratum1-no.tld", [], [], scrape_on_init=False)
         empty_data = "Server: stratum1-no.tld\nMetadata:\nRepositories: 0\n"
@@ -127,11 +131,10 @@ Repositories: 2
         self.assertEqual(server.show(), scraped_data)
 
 
-class TestRepositoryScraping(TestCase):
+class TestRepositoryScraping(MockedURLLibRequest):
     """Test that repositories are scraped properly."""
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_that_default_repos_are_scraped(self, mock_urlopen: MagicMock) -> None:
+    def test_that_default_repos_are_scraped(self) -> None:
         """Test that we get the same repos that are listed in repositories.json."""
         repodata = json.loads(
             fetch(
@@ -154,8 +157,7 @@ class TestRepositoryScraping(TestCase):
         for repo in repodata["replicas"]:
             self.assertIn(repo["name"], [r.name for r in stratum1_no.repositories])
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_ignore_repos(self, mock_urlopen: MagicMock) -> None:
+    def test_ignore_repos(self) -> None:
         """Test that using ignore_repos works as expected."""
         stratum1_no = Stratum1Server(
             "stratum1-no.tld",
@@ -168,8 +170,7 @@ class TestRepositoryScraping(TestCase):
         for repo in stratum1_no.repositories:
             self.assertNotEqual(repo.name, "test")
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_attribute_lookups(self, mock_urlopen: MagicMock()) -> None:
+    def test_attribute_lookups(self) -> None:
         """Test that attributes from .cvmfspublished are as expected."""
         stratum1_no = Stratum1Server("stratum1-no.tld", [], [])
         datarepo = stratum1_no.repositories[0]
@@ -178,11 +179,10 @@ class TestRepositoryScraping(TestCase):
         self.assertEqual(datarepo.attributes()["N"], "data")
 
 
-class TestThreadedFetching(TestCase):
+class TestThreadedFetching(MockedURLLibRequest):
     """Test fetching data using threaded interface."""
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_treaded_scraping(self, mock_urlopen: MagicMock) -> None:
+    def test_treaded_scraping(self) -> None:
         """Test that threaded scraping works as expected."""
         servers = scrape(
             stratum0_servers=[
@@ -200,11 +200,10 @@ class TestThreadedFetching(TestCase):
         self.assertEqual(len(servers), 4)
 
 
-class TestDeprecatedScraping(TestCase):
+class TestDeprecatedScraping(MockedURLLibRequest):
     """Test deprecated scraping data from a server."""
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_treaded_scraping_deprecated(self, mock_urlopen: MagicMock) -> None:
+    def test_treaded_scraping_deprecated(self) -> None:
         """Test that threaded scraping works as expected."""
         servers = scrape_deprecated(
             stratum0_servers=[
@@ -221,8 +220,7 @@ class TestDeprecatedScraping(TestCase):
 
         self.assertEqual(len(servers), 4)
 
-    @patch("urllib.request.urlopen", side_effect=mock_urlopen)
-    def test_single_scraping_deprecated(self, mock_urlopen: MagicMock) -> None:
+    def test_single_scraping_deprecated(self) -> None:
         """Test that threaded scraping works as expected."""
         server = scrape_server_deprecated(
             "stratum0.tld",
