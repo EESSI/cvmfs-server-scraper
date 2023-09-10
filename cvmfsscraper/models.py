@@ -179,7 +179,7 @@ class GetCVMFSPublished(CVMFSBaseModel):
                   CVMFSPublished object.
         """
         lines = blob.decode().split("\n")
-        data = {}
+        data: Dict[str, Any] = {}
         signature_lines = []
         parse_signing_cert = False
         for i, line in enumerate(lines):
