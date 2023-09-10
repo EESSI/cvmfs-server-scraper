@@ -195,7 +195,7 @@ class GetCVMFSPublished(CVMFSBaseModel):
                 except IndexError as exc:
                     raise CVMFSValidationError(f"Line {i}: Empty line?") from exc
 
-                if key not in "CBARDSGNXHTMY":
+                if key not in "ABCDGHMNRSTXY":
                     raise CVMFSValidationError(f"Line {i}: Unknown key '{key}'")
 
                 if key in "AG":
