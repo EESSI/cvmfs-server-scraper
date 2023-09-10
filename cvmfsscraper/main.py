@@ -7,6 +7,7 @@ from cvmfsscraper import scrape_server as scrape_server_proper
 from cvmfsscraper.server import CVMFSServer
 from cvmfsscraper.tools import deprecated
 
+
 def scrape(*args: Any, **kwargs: Dict[str, Any]) -> CVMFSServer:
     """Legacy API support for cvmfsscraper."""
     deprecated(
@@ -14,6 +15,7 @@ def scrape(*args: Any, **kwargs: Dict[str, Any]) -> CVMFSServer:
         "cvmfsserver.scrape",
     )
     return scrape_proper(*args, **kwargs)
+
 
 def scrape_server(*args: Any, **kwargs: Dict[str, Any]) -> CVMFSServer:
     """Legacy API support for cvmfsscraper."""
