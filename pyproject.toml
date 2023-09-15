@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cvmfs-server-scraper"
-version = "0.0.1"
+version = "0.1.0"
 description = "Scrape metadata from CVMFS Stratum servers."
 authors = ["Terje Kvernes <terje@kvernes.no>"]
 maintainers = ["Terje Kvernes <terje@kvernes.no>"]
