@@ -1,6 +1,7 @@
 """Pydantic models for CVMFS HTTP responses."""
 import re
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -279,3 +280,22 @@ class GetCVMFSPublished(CVMFSBaseModel):
             raise ValueError(f"{value} is not a valid hex string")
 
         return value
+
+
+class Endpoints(Enum):
+    """Endpoint mapping.
+
+    We map endpoints to a tuple of (path, model_class) where path is the
+    path to the endpoint, and model_class is the Pydantic model that
+    corresponds to the response.
+    """
+
+    REPOSITORIES_JSON = ("info/v1/repositories.json", GetCVMFSRepositoriesJSON)
+    CVMFS_STATUS_JSON = ("{repo}/.cvmfs_status.json", GetCVMFSStatusJSON)
+    GEOAPI = ("{repo}/api/v1.0/geo/x/{geoapi_str}", GetGeoAPI)
+    CVMFS_PUBLISHED = ("{repo}/.cvmfspublished", GetCVMFSPublished)
+
+    def __init__(self, path: str, model_class: type[BaseModel]):
+        """Initialize the endpoint."""
+        self.path = path
+        self.model_class = model_class

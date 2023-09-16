@@ -5,9 +5,8 @@ from typing import Dict, List, Union
 from urllib import error, request
 
 from cvmfsscraper.constants import GeoAPIStatus
-from cvmfsscraper.exceptions import CVMFSFetchError
 from cvmfsscraper.http_get_models import (
-    CVMFSBaseModel,
+    Endpoints,
     GetCVMFSPublished,
     GetCVMFSRepositoriesJSON,
     GetCVMFSStatusJSON,
@@ -197,7 +196,7 @@ class CVMFSServer:
 
         returns: A GetCVMFSRepositoriesJSON object.
         """
-        return self.fetch_endpoint("repositories.json")
+        return self.fetch_endpoint(Endpoints.REPOSITORIES_JSON)
 
     def fetch_geoapi(self, repo: Repository) -> GetGeoAPI:
         """Fetch the GeoAPI host ordering.
@@ -207,73 +206,66 @@ class CVMFSServer:
 
         :returns: A GetGeoAPI object.
         """
-        return self.fetch_endpoint(
-            "geoapi", repo=repo.name, geoapi_servers=GEOAPI_SERVERS
-        )
+        return self.fetch_endpoint(Endpoints.GEOAPI, repo=repo.name)
 
     def fetch_endpoint(
         self,
-        endpoint: str,
+        endpoint: Endpoints,
         repo: str = "data",
         geoapi_servers: str = GEOAPI_SERVERS,
-        raw: bool = False,
-    ) -> CVMFSBaseModel:
-        """Read and return the content of a specified file.
+    ) -> Union[
+        GetCVMFSPublished, GetCVMFSRepositoriesJSON, GetCVMFSStatusJSON, GetGeoAPI
+    ]:
+        """Fetch and process a specified URL endpoint.
 
-        This function reads the content of a specified file from a
-        test data directory and returns it. Depending on the file, it returns
-        either bytes or a string.
+        This function reads the content of a specified URL and ether returns a validated
+        CVMFS pydantic model representing the data from the endpoint, or throws an
+        exception.
 
-        :param server: The server where the data resides.
-        :param file: The name of the file to read.
-        :param repo: The repository where the data resides. Default is "data".
+        Note: We are deducing the content type from the URL itself. This is due to cvmfs
+        files always returns application/x-cvmfs no matter its content.
 
-        :raises: FileNotFoundError: if the data file is not found.
+        :param endpoint: The endpoint to fetch, as an Endpoints enum value.
+        :param repo: The repository used for the endpoint, if relevant. Required for
+                 all but Endpoints.REPOSITORIES_JSON. Defaults to "data".
+        :param geoapi_servers: Specift the list of DNS names of geoapi servers to use for
+                 the geoapi endpoint. Defaults to GEOAPI_SERVERS.
 
-        :returns: Content of the file as either bytes or string.
+        :raises: PydanticValidationError: If the object creation fails.
+                 CVMFSFetchError: If the endpoint is unknown.
+                 urllib.error.URLError (or a subclass thereof): If the URL fetch fails.
+                 TypeError: If the endpoint is not an Endpoints enum value.
+
+        :returns: An endpoint-specific pydantic model, one of:
+                 GetCVMFSPublished (Endpoints.CVMFS_PUBLISHED)
+                 GetCVMFSRepositoriesJSON (Endpoints.REPOSITORIS_JSON)
+                 GetCVMFSStatusJSON (Endpoints.CVMFS_STATUS_JSON)
+                 GetGeoAPI (Endpoints.GEOAPI)
         """
+        # We do this validation in case someone passes a string instead of an enum value
+        if not isinstance(endpoint, Endpoints):  # type: ignore
+            raise TypeError("endpoint must be an Endpoints enum value")
+
         geoapi_str = ",".join(geoapi_servers)
+        formatted_path = endpoint.path.format(repo=repo, geoapi_str=geoapi_str)
+        url = f"{self.url()}/cvmfs/{formatted_path}"
 
-        # Lookup table for filenames and their paths. Binary read flag is optional.
-        lookup: Dict[str, Dict[str, Union[str, CVMFSBaseModel]]] = {
-            "repositories.json": {
-                "path": "info/v1/repositories.json",
-                "class": GetCVMFSRepositoriesJSON,
-            },
-            ".cvmfs_status.json": {
-                "path": f"{repo}/.cvmfs_status.json",
-                "class": GetCVMFSStatusJSON,
-            },
-            "geoapi": {
-                "path": f"{repo}/api/v1.0/geo/x/{geoapi_str}",
-                "class": GetGeoAPI,
-            },
-            ".cvmfspublished": {
-                "path": f"{repo}/.cvmfspublished",
-                "class": GetCVMFSPublished,
-            },
-        }
-
-        if endpoint not in lookup:
-            raise CVMFSFetchError(f"Unknown endpoint: {endpoint}")
-
-        url = f"{self.url()}/cvmfs/{lookup[endpoint]['path']}"
         timeout_seconds = 5
         try:
             content = request.urlopen(url, timeout=timeout_seconds)
 
-            if endpoint == "repositories.json" or endpoint == ".cvmfs_status.json":
+            if endpoint in [Endpoints.REPOSITORIES_JSON, Endpoints.CVMFS_STATUS_JSON]:
                 content = json.loads(content.read())
-            elif endpoint == ".cvmfspublished":
+            elif endpoint == Endpoints.CVMFS_PUBLISHED:
                 content = GetCVMFSPublished.parse_blob(content.read())
-            elif endpoint == "geoapi":
+            elif endpoint == Endpoints.GEOAPI:
                 indices = [int(x) for x in content.read().decode().split(",")]
                 content = {
                     "host_indices": indices,
                     "host_names_input": geoapi_servers,
                 }
 
-            return lookup[endpoint]["class"](**content)
+            return endpoint.model_class(**content)
 
         except error.URLError as e:
             warn(f"fetch_endpoint: {url}", e)

@@ -1,7 +1,11 @@
 """A CVMFS repository."""
 from typing import Dict
 
-from cvmfsscraper.http_get_models import GetCVMFSPublished, GetCVMFSStatusJSON
+from cvmfsscraper.http_get_models import (
+    Endpoints,
+    GetCVMFSPublished,
+    GetCVMFSStatusJSON,
+)
 from cvmfsscraper.tools import warn
 
 
@@ -130,7 +134,7 @@ class Repository:
 
         :returns: A GetCVMFSPublished object.
         """
-        return self.server.fetch_endpoint(".cvmfspublished", self.name)
+        return self.server.fetch_endpoint(Endpoints.CVMFS_PUBLISHED, self.name)
 
     def fetch_repository(self) -> GetCVMFSStatusJSON:
         """Fetch a repository by name.
@@ -138,6 +142,6 @@ class Repository:
         raises: urlllib.error.URLError (or a subclass thereof) for URL errors.
                 pydantic.ValidationError if the object creation fails.
 
-        :returns: A RepositoryOrReplica object.
+        :returns: GetCVMFSStatusJSON object.
         """
-        return self.server.fetch_endpoint(".cvmfs_status.json", self.name)
+        return self.server.fetch_endpoint(Endpoints.CVMFS_STATUS_JSON, self.name)

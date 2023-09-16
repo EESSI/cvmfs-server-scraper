@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 
 from cvmfsscraper import scrape
 from cvmfsscraper.constants import GeoAPIStatus
-from cvmfsscraper.exceptions import CVMFSFetchError
 from cvmfsscraper.main import scrape as scrape_deprecated
 from cvmfsscraper.main import scrape_server as scrape_server_deprecated
 from cvmfsscraper.server import Stratum0Server, Stratum1Server
@@ -72,7 +71,7 @@ class TestModernAPI(MockedURLLibRequest):
         """Test that fetching an unknown endpoint raises the correct exception."""
         stratum1 = Stratum1Server("stratum1-no.tld", [], [], scrape_on_init=False)
 
-        with self.assertRaises(CVMFSFetchError):
+        with self.assertRaises(TypeError):
             stratum1.fetch_endpoint("unknown")
 
 
