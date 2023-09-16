@@ -2,7 +2,7 @@
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -299,3 +299,10 @@ class Endpoints(Enum):
         """Initialize the endpoint."""
         self.path = path
         self.model_class = model_class
+
+
+# Dynamically creating this list based on the Endpoints enum values
+# is not supported by mypy et al, so we have to do it manually.
+EndpointClassesType = Union[
+    GetCVMFSPublished, GetCVMFSRepositoriesJSON, GetCVMFSStatusJSON, GetGeoAPI
+]

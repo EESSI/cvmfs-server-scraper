@@ -1,15 +1,15 @@
 """Server class for cvmfs-server-metadata."""
 
 import json
-from typing import Dict, List, Union
+from typing import Dict, List
 from urllib import error, request
 
 from cvmfsscraper.constants import GeoAPIStatus
 from cvmfsscraper.http_get_models import (
+    EndpointClassesType,
     Endpoints,
     GetCVMFSPublished,
     GetCVMFSRepositoriesJSON,
-    GetCVMFSStatusJSON,
     GetGeoAPI,
     RepositoryOrReplica,
 )
@@ -213,9 +213,7 @@ class CVMFSServer:
         endpoint: Endpoints,
         repo: str = "data",
         geoapi_servers: str = GEOAPI_SERVERS,
-    ) -> Union[
-        GetCVMFSPublished, GetCVMFSRepositoriesJSON, GetCVMFSStatusJSON, GetGeoAPI
-    ]:
+    ) -> EndpointClassesType:
         """Fetch and process a specified URL endpoint.
 
         This function reads the content of a specified URL and ether returns a validated
