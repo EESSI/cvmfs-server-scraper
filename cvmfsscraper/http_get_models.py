@@ -2,7 +2,7 @@
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -295,7 +295,7 @@ class Endpoints(Enum):
     GEOAPI = ("{repo}/api/v1.0/geo/x/{geoapi_str}", GetGeoAPI)
     CVMFS_PUBLISHED = ("{repo}/.cvmfspublished", GetCVMFSPublished)
 
-    def __init__(self, path: str, model_class: type[BaseModel]):
+    def __init__(self, path: str, model_class: Type[BaseModel]) -> None:
         """Initialize the endpoint."""
         self.path = path
         self.model_class = model_class
