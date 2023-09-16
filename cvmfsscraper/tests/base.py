@@ -29,7 +29,6 @@ def validate_and_load(data_dir: str) -> Dict[str, Union[str, bytes]]:
                 data = f.read()
 
             url_mapping[url] = data
-
     return url_mapping
 
 

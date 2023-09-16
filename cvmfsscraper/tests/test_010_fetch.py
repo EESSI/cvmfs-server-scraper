@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 from cvmfsscraper import scrape
 from cvmfsscraper.constants import GeoAPIStatus
+from cvmfsscraper.exceptions import CVMFSFetchError
 from cvmfsscraper.main import scrape as scrape_deprecated
 from cvmfsscraper.main import scrape_server as scrape_server_deprecated
 from cvmfsscraper.server import Stratum0Server, Stratum1Server
@@ -64,6 +65,17 @@ class TestFetchAPI(MockedURLLibRequest):
         self.assertEqual(obj.fetch_errors[0]["error"].reason, "timeout")
 
 
+class TestModernAPI(MockedURLLibRequest):
+    """Test fetching missing or broken endpoints with the new API."""
+
+    def test_fetching_unknown_endpoint(self):
+        """Test that fetching an unknown endpoint raises the correct exception."""
+        stratum1 = Stratum1Server("stratum1-no.tld", [], [], scrape_on_init=False)
+
+        with self.assertRaises(CVMFSFetchError):
+            stratum1.fetch_endpoint("unknown")
+
+
 class TestScraping(MockedURLLibRequest):
     """Test scraping data from a server."""
 
@@ -118,8 +130,8 @@ class TestScraping(MockedURLLibRequest):
         server.scrape()
         scraped_data = """Server: stratum1-no.tld
 Metadata:
-  - schema: 1
-  - last_geodb_update: Tue Aug 29 10:00:03 UTC 2023
+  - schema_version: 1
+  - last_geodb_update: 2023-08-29 10:00:03
   - cvmfs_version: 2.10.0-1
   - os_id: rhel
   - os_version_id: 8.4

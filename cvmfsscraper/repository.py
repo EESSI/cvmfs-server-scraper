@@ -1,10 +1,8 @@
 """A CVMFS repository."""
-import datetime
-import json
-import sys
 from typing import Dict
 
-from cvmfsscraper.tools import fetch
+from cvmfsscraper.http_get_models import GetCVMFSPublished, GetCVMFSStatusJSON
+from cvmfsscraper.tools import warn
 
 
 class Repository:
@@ -35,7 +33,7 @@ class Repository:
     def __init__(self, server: object, name: str, url: str):
         """Initialize the repository.
 
-        :param server: The server object.
+        :param server: The server object this repository belongs to.
         :param name: The name of the repository.
         :param url: The URL of the repository.
         """
@@ -55,15 +53,27 @@ class Repository:
 
         self.fetch_errors = []
 
-        content = fetch(self, self.server.name, self.path + "/.cvmfspublished")
-        self.parse_cvmfspublished(content)
-
-        content = fetch(self, self.server.name, self.path + "/.cvmfs_status.json")
-        self.parse_status_json(content)
+        self.scrape()
 
     def __str__(self) -> str:
         """Return a string representation of the repository."""
         return self.name
+
+    def scrape(self) -> None:
+        """Scrape the repository."""
+        try:
+            cvmfspublished = self.fetch_cvmfspublished()
+            self.parse_cvmfspublished(cvmfspublished)
+        except Exception as exc:
+            warn("CVMFSpublished", exc)
+            self.fetch_errors.append({"path": self.path, "error": exc})
+
+        try:
+            repo = self.fetch_repository()
+            self.parse_status_json(repo)
+        except Exception as exc:
+            warn("Repository", exc)
+            self.fetch_errors.append({"path": self.path, "error": exc})
 
     def attribute_mapping(self) -> Dict[str, str]:
         """Return the attribute mapping."""
@@ -78,8 +88,7 @@ class Repository:
         :param attribute: The attribute to return.
         """
         if len(attribute) == 1:
-            attribute = self.KEY_TO_ATTRIBUTE_MAPPING.get(attribute)
-
+            attribute = self.KEY_TO_ATTRIBUTE_MAPPING.get(attribute, attribute)
         return getattr(self, attribute, "None")
 
     def attributes(self) -> Dict[str, str]:
@@ -92,67 +101,43 @@ class Repository:
             attributes[key] = getattr(self, attr, "None")
         return attributes
 
-    def parse_status_json(self, json_data: str) -> None:
+    def parse_status_json(self, obj: GetCVMFSStatusJSON) -> None:
         """Parse the contents of a .cvmfs_status.json file.
 
         :param json_data: The JSON data to parse.
         """
-        if not json_data:
-            return
+        self._repo_status_loaded = 1
 
-        try:
-            repo_status = json.loads(json_data)
-            self._repo_status_loaded = 1
-        except Exception as exc:  # pragma: no cover (probably should exit)
-            print("Error parsing JSON: " + str(exc))
-            sys.exit(1)
+        self.last_snapshot = obj.last_snapshot
+        self.last_gc = obj.last_gc
 
-        timeformat = "%a %b %d %H:%M:%S %Z %Y"
-
-        if "last_snapshot" in repo_status:
-            self.last_snapshot = datetime.datetime.strptime(
-                repo_status["last_snapshot"], timeformat
-            ).timestamp()
-
-        if "last_gc" in repo_status:
-            self.last_gc = datetime.datetime.strptime(
-                repo_status["last_gc"], timeformat
-            ).timestamp()
-
-    def parse_cvmfspublished(self, content: str) -> None:
+    def parse_cvmfspublished(self, obj: GetCVMFSPublished) -> None:
         """Parse a .cvmfspublished file.
 
         https://cvmfs.readthedocs.io/en/stable/cpt-details.html#internal-manifest-structure.
         """
-        if not content:
-            return
-
         self._cvmfspublished_loaded = 1
 
-        signature_inc = False
-        self.signature = bytes()
-        for line in content.splitlines():
-            if signature_inc:
-                self.signature = self.signature + line
-            else:
-                if chr(line[0]) == "-":
-                    signature_inc = True
-                else:
-                    line = line.decode("iso-8859-1")
-                    (key, value) = (line[0], line[1:])
-                    self.process_cvmfspublished_key_value(key, value)
-
-        return
-
-    def process_cvmfspublished_key_value(self, key: str, value: str) -> None:
-        """Process a key/value pair from the .cvmfspublished file.
-
-        :param key: The key from the .cvmfspublished file.
-        :param value: The value associated with the key.
-
-        :raises: AttributeError if the attribute doesn't exist in the class.
-        """
-        attribute_name = self.KEY_TO_ATTRIBUTE_MAPPING.get(key)
-
-        if attribute_name:
+        for key, value in obj.model_dump().items():
+            attribute_name = self.KEY_TO_ATTRIBUTE_MAPPING.get(key, key)
             setattr(self, attribute_name, value)
+
+    def fetch_cvmfspublished(self) -> GetCVMFSPublished:
+        """Fetch the CVMFSPublished file for a given repo.
+
+        raises: urlllib.error.URLError (or a subclass thereof) for URL errors.
+                pydantic.ValidationError if the object creation fails.
+
+        :returns: A GetCVMFSPublished object.
+        """
+        return self.server.fetch_endpoint(".cvmfspublished", self.name)
+
+    def fetch_repository(self) -> GetCVMFSStatusJSON:
+        """Fetch a repository by name.
+
+        raises: urlllib.error.URLError (or a subclass thereof) for URL errors.
+                pydantic.ValidationError if the object creation fails.
+
+        :returns: A RepositoryOrReplica object.
+        """
+        return self.server.fetch_endpoint(".cvmfs_status.json", self.name)

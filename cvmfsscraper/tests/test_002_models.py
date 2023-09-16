@@ -10,19 +10,14 @@ from unittest import TestCase
 from pydantic import ValidationError as PydanticValidationError
 
 from cvmfsscraper.exceptions import CVMFSValidationError
-from cvmfsscraper.models import (
+from cvmfsscraper.http_get_models import (
     CVMFSBaseModel,
     GetCVMFSPublished,
     GetCVMFSRepositoriesJSON,
     GetCVMFSStatusJSON,
     GetGeoAPI,
 )
-
-GEOAPI_SERVERS = [
-    "cvmfs-s1fnal.opensciencegrid.org",
-    "cvmfs-stratum-one.cern.ch",
-    "cvmfs-stratum-one.ihep.ac.cn",
-]
+from cvmfsscraper.tools import GEOAPI_SERVERS
 
 
 def get_contents(server: str, file: str, repo: str = "data") -> Union[str, bytes]:
@@ -73,7 +68,7 @@ def get_contents(server: str, file: str, repo: str = "data") -> Union[str, bytes
     # Read the data file based on its mode
     with open(datafile, mode) as f:
         if lookup[file].get("json", False):
-            return json.load(f)
+            return json.loads(f.read())
         return f.read()
 
 
@@ -205,20 +200,20 @@ class TestCVMFSPublishedModel(BaseCVMFSModelTestCase):
 
         rch = "7bbb07002bea5370c1e30082b8a955c7de40c21d"
 
-        self.assertEqual(obj.root_catalog_hash, rch)
+        self.assertEqual(obj.root_cryptographic_hash, rch)
         self.assertEqual(obj.get_catalog_entry("C"), rch)
-        self.assertEqual(obj.get_catalog_entry("root_catalog_hash"), rch)
+        self.assertEqual(obj.get_catalog_entry("root_cryptographic_hash"), rch)
 
-        self.assertFalse(obj.fetch_alternative_name)
+        self.assertFalse(obj.alternative_name)
         self.assertFalse(obj.get_catalog_entry("A"))
 
         self.assertEqual(obj.root_path_hash, "d41d8cd98f00b204e9800998ecf8427e")
         self.assertEqual(obj.get_catalog_entry("R"), "d41d8cd98f00b204e9800998ecf8427e")
 
-        self.assertEqual(obj.ttl_of_root_catalog, 240)
+        self.assertEqual(obj.root_catalog_ttl, 240)
         self.assertEqual(obj.get_catalog_entry("D"), 240)
 
-        self.assertEqual(obj.published_revision, 13)
+        self.assertEqual(obj.revision, 13)
         self.assertEqual(obj.get_catalog_entry("S"), 13)
 
         self.assertTrue(obj.is_garbage_collectable)
@@ -229,30 +224,30 @@ class TestCVMFSPublishedModel(BaseCVMFSModelTestCase):
 
         sch = "2f14a4ac9674937f1d335fd9a9bd20f4d06fb49f"
 
-        self.assertEqual(obj.signing_certificate_hash, sch)
+        self.assertEqual(obj.signing_certificate_cryptographic_hash, sch)
         self.assertEqual(obj.get_catalog_entry("X"), sch)
 
         thh = "738301fed55210e7bf40511c466eb9f93e05e296"
 
-        self.assertEqual(obj.tag_history_hash, thh)
+        self.assertEqual(obj.tag_history_cryptographic_hash, thh)
         self.assertEqual(obj.get_catalog_entry("H"), thh)
 
         datetime_obj = datetime.fromtimestamp(1669133684, timezone.utc)
-        self.assertEqual(obj.timestamp, datetime_obj)
+        self.assertEqual(obj.revision_timestamp, datetime_obj)
         self.assertEqual(obj.get_catalog_entry("T"), datetime_obj)
 
         jmh = "85e4f386da0d5d77c7f66cf2f58e10951f24b653"
 
-        self.assertEqual(obj.json_metadata_hash, jmh)
+        self.assertEqual(obj.metadata_cryptographic_hash, jmh)
         self.assertEqual(obj.get_catalog_entry("M"), jmh)
 
         refch = "8d2f044f4cb73575373e6ba2fd3438b5679ec99e"
 
-        self.assertEqual(obj.reflog_checksum_hash, refch)
+        self.assertEqual(obj.reflog_checksum_cryptographic_hash, refch)
         self.assertEqual(obj.get_catalog_entry("Y"), refch)
 
         self.assertEqual(obj.get_catalog_entry("B"), 19456)
-        self.assertEqual(obj.root_file_catalog_size, 19456)
+        self.assertEqual(obj.root_size, 19456)
 
     def test_create_cvmfs_published_with_missing_data(self) -> None:
         """Test creation of CVMFSPublished instances with missing data."""

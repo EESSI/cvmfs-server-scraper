@@ -6,6 +6,12 @@ import sys
 import urllib.request
 from typing import Any
 
+GEOAPI_SERVERS = [
+    "cvmfs-s1fnal.opensciencegrid.org",
+    "cvmfs-stratum-one.cern.ch",
+    "cvmfs-stratum-one.ihep.ac.cn",
+]
+
 
 def warn(msg: str, *args: Any, **kwargs: Any) -> None:
     """Print a warning message to stderr."""
@@ -28,7 +34,7 @@ def fetch_absolute(obj: object, url: str) -> str:
 
         return content
     except Exception as e:
-        warn(url, e)
+        warn(f"fetch_absolute: {url}", e)
         obj.fetch_errors.append({"path": url, "error": e})
 
     return

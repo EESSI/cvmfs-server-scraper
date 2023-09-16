@@ -47,9 +47,15 @@ class GetGeoAPI(CVMFSBaseModel):
                 "host_indices and host_names_input must be of the same length."
             )
 
+        return self
+
     def host_names_ordered(self) -> List[str]:
         """Return the host names in the order specified by the GeoAPI."""
         return [self.host_names_input[i - 1] for i in self.host_indices]
+
+    def has_order(self, order: List[int]) -> bool:
+        """Check that the host_indices match the given list of ints."""
+        return self.host_indices == order
 
 
 class GetCVMFSStatusJSON(CVMFSBaseModel):
@@ -100,6 +106,7 @@ class GetCVMFSRepositoriesJSON(CVMFSBaseModel):
     os_id: str = Field(..., description="The OS ID")
     os_version_id: str = Field(..., description="The OS version ID")
     os_pretty_name: str = Field(..., description="The pretty name of the OS")
+
     repositories: Optional[List[RepositoryOrReplica]] = Field(
         None, description="List of repositories"
     )
@@ -129,7 +136,7 @@ class GetCVMFSRepositoriesJSON(CVMFSBaseModel):
             raise ValueError("Only one of repositories or replicas should be set.")
         if not repositories and not replicas:
             raise ValueError("At least one of repositories or replicas should be set.")
-        return repositories
+        return self
 
 
 class GetCVMFSPublished(CVMFSBaseModel):
@@ -156,19 +163,20 @@ class GetCVMFSPublished(CVMFSBaseModel):
         for more details.
 
         Mapping:
-        C -> root_catalog_hash
-        B -> root_file_catalog_size
-        A -> fetch_alternative_name
-        R -> root_path_hash
-        D -> ttl_of_root_catalog
-        S -> published_revision
-        G -> is_garbage_collectable
-        N -> full_name
-        X -> signing_certificate_hash
-        H -> tag_history_hash
-        T -> timestamp
-        M -> json_metadata_hash
-        Y -> reflog_checksum_hash
+        A: "alternative_name",
+        B: "root_size",
+        C: "root_cryptographic_hash",
+        D: "root_catalogue_ttl",
+        H: "tag_history_cryptographic_hash",
+        G: "is_garbage_collectable",
+        R: "root_path_hash",
+        S: "revision",
+        T: "revision_timestamp",
+        M: "metadata_cryptographic_hash",
+        N: "full_name",
+        L: "micro_catalogues",
+        X: "signing_certificate_cryptographic_hash",
+        Y: "reflog_checksum_cryptographic_hash",
 
 
         :param blob: The binary blob to be parsed.
@@ -177,19 +185,21 @@ class GetCVMFSPublished(CVMFSBaseModel):
 
         :returns: A dictionary that can be used to create an instance of a
                   CVMFSPublished object.
+
         """
-        lines = blob.decode().split("\n")
+        lines = blob.split(b"\n")
         data: Dict[str, Any] = {}
         signature_lines = []
         parse_signing_cert = False
         for i, line in enumerate(lines):
-            if line.startswith("--"):
+            if line.startswith(b"--"):
                 parse_signing_cert = True
                 continue
             if parse_signing_cert:
                 signature_lines.append(line.strip())
                 break
             else:
+                line = line.decode("utf-8")
                 try:
                     key, value = line[0], line[1:]
                 except IndexError as exc:
@@ -200,32 +210,34 @@ class GetCVMFSPublished(CVMFSBaseModel):
 
                 if key in "AG":
                     if value.lower() == "yes":
-                        value = True
+                        value = True  # type: ignore
                     elif value.lower() == "no":
-                        value = False
+                        value = False  # type: ignore
                     else:
                         raise CVMFSValidationError(
                             f"Line {i}: '{key}' expected 'yes' or 'no', got '{value}'"
                         )
+
                 data[key] = value
 
-        data["signing_certificate"] = "\n".join(signature_lines)
+        data["signing_certificate"] = b"\n".join(signature_lines)
 
         return data
 
-    root_catalog_hash: str = hex_field(40, 40, "C")
-    root_file_catalog_size: int = Field(..., alias="B", gt=0)
-    fetch_alternative_name: bool = Field(..., alias="A")
+    alternative_name: bool = Field(..., alias="A")
+    root_size: int = Field(..., alias="B", gt=0)
+    root_cryptographic_hash: str = hex_field(40, 40, "C")
+    root_catalog_ttl: int = Field(..., alias="D", gt=0)
     root_path_hash: str = hex_field(32, 32, "R")
-    ttl_of_root_catalog: int = Field(..., alias="D", gt=0)
-    published_revision: int = Field(..., alias="S", gt=0)
     is_garbage_collectable: bool = Field(..., alias="G")
+    tag_history_cryptographic_hash: str = hex_field(40, 40, "H")
+    revision_timestamp: datetime = Field(..., alias="T")
+    revision: int = Field(..., alias="S", gt=0)
+    micro_catalogues: str = Field(None, alias="L")
+    metadata_cryptographic_hash: str = hex_field(40, 40, "M")
     full_name: str = Field(..., alias="N")
-    signing_certificate_hash: str = hex_field(40, 40, "X")
-    tag_history_hash: str = hex_field(40, 40, "H")
-    timestamp: datetime = Field(..., alias="T")
-    json_metadata_hash: str = hex_field(40, 40, "M")
-    reflog_checksum_hash: str = hex_field(40, 40, "Y")
+    signing_certificate_cryptographic_hash: str = hex_field(40, 40, "X")
+    reflog_checksum_cryptographic_hash: str = hex_field(40, 40, "Y")
 
     def get_catalog_entry(self, name_or_alias: str) -> Any:
         """Retrieve a catalog entry by its name or alias.
@@ -247,12 +259,12 @@ class GetCVMFSPublished(CVMFSBaseModel):
                 ) from exc
 
     @field_validator(
-        "root_catalog_hash",
+        "root_cryptographic_hash",
         "root_path_hash",
-        "signing_certificate_hash",
-        "tag_history_hash",
-        "json_metadata_hash",
-        "reflog_checksum_hash",
+        "signing_certificate_cryptographic_hash",
+        "tag_history_cryptographic_hash",
+        "metadata_cryptographic_hash",
+        "reflog_checksum_cryptographic_hash",
     )
     def validate_hex(cls, value: str):
         """Validate if a string is a hexadecimal string.
