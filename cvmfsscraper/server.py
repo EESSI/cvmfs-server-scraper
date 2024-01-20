@@ -226,7 +226,7 @@ class CVMFSServer:
         :param endpoint: The endpoint to fetch, as an Endpoints enum value.
         :param repo: The repository used for the endpoint, if relevant. Required for
                  all but Endpoints.REPOSITORIES_JSON. Defaults to "data".
-        :param geoapi_servers: Specift the list of DNS names of geoapi servers to use for
+        :param geoapi_servers: Specify the list of DNS names of geoapi servers to use for
                  the geoapi endpoint. Defaults to GEOAPI_SERVERS.
 
         :raises: PydanticValidationError: If the object creation fails.
@@ -236,7 +236,7 @@ class CVMFSServer:
 
         :returns: An endpoint-specific pydantic model, one of:
                  GetCVMFSPublished (Endpoints.CVMFS_PUBLISHED)
-                 GetCVMFSRepositoriesJSON (Endpoints.REPOSITORIS_JSON)
+                 GetCVMFSRepositoriesJSON (Endpoints.REPOSITORIES_JSON)
                  GetCVMFSStatusJSON (Endpoints.CVMFS_STATUS_JSON)
                  GetGeoAPI (Endpoints.GEOAPI)
         """
