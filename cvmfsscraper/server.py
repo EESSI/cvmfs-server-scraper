@@ -1,11 +1,20 @@
 """Server class for cvmfs-server-metadata."""
 
 import json
-from typing import Any, Dict, List
+from typing import Dict, List
+from urllib import error, request
 
 from cvmfsscraper.constants import GeoAPIStatus
+from cvmfsscraper.http_get_models import (
+    EndpointClassesType,
+    Endpoints,
+    GetCVMFSPublished,
+    GetCVMFSRepositoriesJSON,
+    GetGeoAPI,
+    RepositoryOrReplica,
+)
 from cvmfsscraper.repository import Repository
-from cvmfsscraper.tools import fetch, fetch_absolute
+from cvmfsscraper.tools import GEOAPI_SERVERS, warn
 
 
 class CVMFSServer:
@@ -58,9 +67,13 @@ class CVMFSServer:
         """Return a string representation of the server."""
         return self.name
 
+    def url(self) -> str:
+        """Return the URL of the server."""
+        return "http://" + self.name
+
     def scrape(self) -> None:
         """Scrape the server."""
-        self.repositories = self.populate_repositories()
+        self.populate_repositories()
 
         if not self.fetch_errors:
             self.geoapi_status = self.check_geoapi_status()
@@ -76,31 +89,6 @@ class CVMFSServer:
             content += "  - " + repo.name + "\n"
         return content
 
-    @staticmethod
-    def get_geoapi_url(name: str, repository_name: str) -> str:
-        """Generate a GeoAPI URL based on the given parameters.
-
-        Constructs a URL using the provided `name` and `repository_name`.
-
-        :param name: The name used in the URL.
-        :param repository_name: The name of the repository used in the URL.
-
-        :returns: The fully formed GeoAPI URL as a string.
-        """
-        # Note: As a feature, instead of providing an UUID or a proxy, we ca
-        # simply pass "x" as the UUID, and the GeoAPI will... work.
-        base_url = "http://"
-        endpoint = "api/v1.0/geo/x"
-        stratum_ones = (
-            "cvmfs-s1fnal.opensciencegrid.org,"
-            "cvmfs-stratum-one.cern.ch,"
-            "cvmfs-stratum-one.ihep.ac.cn"
-        )
-
-        full_url = f"{base_url}{name}/cvmfs/{repository_name}/{endpoint}/{stratum_ones}"
-
-        return full_url
-
     def is_down(self) -> bool:
         """Return whether the server is down or not."""
         return self._is_down
@@ -113,76 +101,57 @@ class CVMFSServer:
         """Return whether the server is a stratum1 server or not."""
         return self.server_type == 1
 
-    def populate_repositories(self) -> List[Repository]:
+    def populate_repositories(self) -> None:
         """Populate the repositories list.
 
         If the server is down, the list will be empty.
-
-        :return: List of repositories.
         """
-        content = fetch(self, self.name, "cvmfs/info/v1/repositories.json")
+        try:
+            repodata = self.fetch_repositories_json()
 
-        # This needs to check the error available and probably pop it from the list
-        if self.fetch_errors:  # pragma: no cover
-            self._is_down = True
-            return []
+            if repodata:
+                self.process_repositories_json(repodata)
 
-        self._is_down = False
+            if self.fetch_errors:  # pragma: no cover
+                self._is_down = True
+                return []
 
-        if content:
-            return self.process_repositories_json(content)
-        else:  # pragma: no cover
-            return []
+            self._is_down = False
+        except Exception as e:  # pragma: no cover
+            warn(f"Populate repository: {self.name}", e)
+            self.fetch_errors.append({"path": self.name, "error": e})
 
-    def process_repositories_json(self, json_data: str) -> List[Repository]:
+    def process_repositories_json(
+        self, repodata: GetCVMFSRepositoriesJSON
+    ) -> List[Repository]:
         """Process the repositories.json file.
 
-        Note that this file also contains metadata about the server.
+        Sets self.repos and self.metadata.
 
-        :param json_data: The content of the repositories.json file.
-
-        :return: An alphabetically sorted list of repositories.
+        :param repodata: The object of the repositories.json file.
         """
-        repos_info = json.loads(json_data)
-        repos = []
+        repos_on_server: List[RepositoryOrReplica] = []
+        repos: List[Repository] = []
 
-        for key, value in repos_info.items():
-            if key == "replicas":
-                for repo_info in repos_info["replicas"]:
-                    self.server_type = 1
-                    if self.process_repo(repo_info):
-                        # use "str" to convert from unicode to string
-                        repos.append(
-                            Repository(self, repo_info["name"], str(repo_info["url"]))
-                        )
-            elif key == "repositories":
-                for repo_info in repos_info["repositories"]:
-                    self.server_type = 0
-                    if self.process_repo(repo_info):
-                        repos.append(
-                            Repository(self, repo_info["name"], str(repo_info["url"]))
-                        )
-            else:
-                self.metadata[key] = str(value)
+        if repodata.replicas:
+            self.server_type = 1
+            repos_on_server = repodata.replicas
+        else:
+            self.server_type = 0
+            repos_on_server = repodata.repositories
 
-        return sorted(repos, key=lambda repo: repo.name)
+        for repo in repos_on_server:
+            if repo.name in self.ignored_repositories:
+                continue
+            repos.append(Repository(self, repo.name, repo.url))
 
-    def process_repo(self, repo_info: Dict[str, Any]) -> bool:
-        """Check to see if a repository should be processed.
+        self.repositories = sorted(repos, key=lambda repo: repo.name)
 
-        :param repo_info: The repository information.
+        for key, value in repodata.model_dump().items():
+            if key in ["replicas", "repositories"]:
+                continue
 
-        :return: True if the repository should be processed, False otherwise.
-        """
-        repo_name = repo_info["name"]
-
-        if repo_name in self.ignored_repositories:
-            return False
-
-        if "pass-through" in repo_info:  # pragma: no cover
-            return False
-
-        return True
+            self.metadata[key] = str(value)
 
     def check_geoapi_status(self) -> GeoAPIStatus:
         """Check the geoapi for the server with the first repo available.
@@ -209,16 +178,96 @@ class CVMFSServer:
         if not self.repositories:  # pragma: no cover
             return GeoAPIStatus.NOT_FOUND
 
-        url = self.get_geoapi_url(self.name, self.repositories[0].name)
-
         try:
-            output = fetch_absolute(self, url).decode().strip()
-            if output == ",".join(str(item) for item in self.geoapi_order):
+            geoapi_obj = self.fetch_geoapi(self.repositories[0])
+            if geoapi_obj.has_order(self.geoapi_order):
                 return GeoAPIStatus.OK
             else:
                 return GeoAPIStatus.LOCATION_ERROR
-        except Exception:  # pragma: no cover
+        except Exception as e:  # pragma: no cover
+            warn("GEOAPI failure", e)
             return GeoAPIStatus.NO_RESPONSE
+
+    def fetch_repositories_json(self) -> GetCVMFSRepositoriesJSON:
+        """Fetch the repositories JSON file.
+
+        raises: urlllib.error.URLError (or a subclass thereof) for URL errors.
+                pydantic.ValidationError if the object creation fails.
+
+        returns: A GetCVMFSRepositoriesJSON object.
+        """
+        return self.fetch_endpoint(Endpoints.REPOSITORIES_JSON)
+
+    def fetch_geoapi(self, repo: Repository) -> GetGeoAPI:
+        """Fetch the GeoAPI host ordering.
+
+        raises: urlllib.error.URLError (or a subclass thereof) for URL errors.
+                pydantic.ValidationError if the object creation fails.
+
+        :returns: A GetGeoAPI object.
+        """
+        return self.fetch_endpoint(Endpoints.GEOAPI, repo=repo.name)
+
+    def fetch_endpoint(
+        self,
+        endpoint: Endpoints,
+        repo: str = "data",
+        geoapi_servers: str = GEOAPI_SERVERS,
+    ) -> EndpointClassesType:
+        """Fetch and process a specified URL endpoint.
+
+        This function reads the content of a specified URL and ether returns a validated
+        CVMFS pydantic model representing the data from the endpoint, or throws an
+        exception.
+
+        Note: We are deducing the content type from the URL itself. This is due to cvmfs
+        files always returns application/x-cvmfs no matter its content.
+
+        :param endpoint: The endpoint to fetch, as an Endpoints enum value.
+        :param repo: The repository used for the endpoint, if relevant. Required for
+                 all but Endpoints.REPOSITORIES_JSON. Defaults to "data".
+        :param geoapi_servers: Specify the list of DNS names of geoapi servers to use for
+                 the geoapi endpoint. Defaults to GEOAPI_SERVERS.
+
+        :raises: PydanticValidationError: If the object creation fails.
+                 CVMFSFetchError: If the endpoint is unknown.
+                 urllib.error.URLError (or a subclass thereof): If the URL fetch fails.
+                 TypeError: If the endpoint is not an Endpoints enum value.
+
+        :returns: An endpoint-specific pydantic model, one of:
+                 GetCVMFSPublished (Endpoints.CVMFS_PUBLISHED)
+                 GetCVMFSRepositoriesJSON (Endpoints.REPOSITORIES_JSON)
+                 GetCVMFSStatusJSON (Endpoints.CVMFS_STATUS_JSON)
+                 GetGeoAPI (Endpoints.GEOAPI)
+        """
+        # We do this validation in case someone passes a string instead of an enum value
+        if not isinstance(endpoint, Endpoints):  # type: ignore
+            raise TypeError("endpoint must be an Endpoints enum value")
+
+        geoapi_str = ",".join(geoapi_servers)
+        formatted_path = endpoint.path.format(repo=repo, geoapi_str=geoapi_str)
+        url = f"{self.url()}/cvmfs/{formatted_path}"
+
+        timeout_seconds = 5
+        try:
+            content = request.urlopen(url, timeout=timeout_seconds)
+
+            if endpoint in [Endpoints.REPOSITORIES_JSON, Endpoints.CVMFS_STATUS_JSON]:
+                content = json.loads(content.read())
+            elif endpoint == Endpoints.CVMFS_PUBLISHED:
+                content = GetCVMFSPublished.parse_blob(content.read())
+            elif endpoint == Endpoints.GEOAPI:
+                indices = [int(x) for x in content.read().decode().split(",")]
+                content = {
+                    "host_indices": indices,
+                    "host_names_input": geoapi_servers,
+                }
+
+            return endpoint.model_class(**content)
+
+        except error.URLError as e:
+            warn(f"fetch_endpoint: {url}", e)
+            raise e from e
 
 
 class Stratum0Server(CVMFSServer):

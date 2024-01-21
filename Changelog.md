@@ -6,6 +6,7 @@
 
 - Support for server metadata from `repositories.json`, available as the dictionary `server.metadata`
 - Large scale code refactoring and cleaning, adding typing and docstrings
+- Endpoint data validation through use of pydantic models
 - Server objects can now be of either CVMFSServer (generic, behaves depending on how self.server_type is set (either 0 or 1)), Stratum0Server (a stratum0 server), or Stratum1Server (a stratum1 server).
 
 ### Fixed

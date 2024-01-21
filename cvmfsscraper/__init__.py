@@ -19,11 +19,10 @@ def scrape_server(
     :param ignore_repos: List of repositories to ignore.
     :param is_stratum0: Whether the server is a stratum0 server.
     """
-    cls = Stratum1Server
     if is_stratum0:
-        cls = Stratum0Server
+        return Stratum0Server(dns_name, repos, ignore_repos)
 
-    return cls(dns_name, repos, ignore_repos)
+    return Stratum1Server(dns_name, repos, ignore_repos)
 
 
 def scrape(

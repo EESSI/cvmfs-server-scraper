@@ -33,12 +33,12 @@ for server in servers:
     print("  Repositories: ")
     for repo in server.repositories:
         print("   - " + repo.name)
-        print("    : Root size: " + repo.root_size)
-        print("    : Revision: " + repo.revision)
-        print("    : Revision timestamp: " + repo.revision_timestamp)
-        print("    : Last snapshot: " + str(repo.last_snapshot))
+        print(f"    : Root size: {repo.root_size}")
+        print(f"    : Revision: {repo.revision}")
+        print(f"    : Revision timestamp: {repo.revision_timestamp}")
+        print(f"    : Last snapshot: {repo.last_snapshot}")
         print("    ---")
         for key, attr in sorted(repo.attribute_mapping().items(), key=lambda x: x[1]):
-            print("    : (" + key + ") " + attr + ": " + repo.attribute(key))
+            print(f"    : ({key}) {attr}: {repo.attribute(key)}")
 
     print()
