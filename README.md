@@ -14,9 +14,12 @@ And then for every repo it finds (that it's not told to ignore), it grabs:
 ````python
 #!/usr/bin/env python3
 
-from cvmfsscraper import scrape, scrape_server
+import logging
+from cvmfsscraper import scrape, scrape_server, set_log_level
 
 # server = scrape_server("aws-eu-west1.stratum1.cvmfs.eessi-infra.org")
+
+set_log_level(logging.DEBUG)
 
 servers = scrape(
     stratum0_servers=[
