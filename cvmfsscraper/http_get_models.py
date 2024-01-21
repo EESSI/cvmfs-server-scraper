@@ -68,8 +68,8 @@ class GetCVMFSStatusJSON(CVMFSBaseModel):
         json_schema_extra={"format": "%a %b %d %H:%M:%S %Z %Y"},
     )
 
-    last_gc: datetime = Field(
-        ...,
+    last_gc: Optional[datetime] = Field(
+        None,
         description="The last garbage collection time",
         json_schema_extra={"format": "%a %b %d %H:%M:%S %Z %Y"},
     )
