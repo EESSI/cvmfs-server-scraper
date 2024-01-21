@@ -9,6 +9,10 @@ And then for every repo it finds (that it's not told to ignore), it grabs:
     - cvmfs/<repo>/.cvmfs_status.json
     - cvmfs/<repo>/.cvmfspublished
 
+## Installation
+
+`pip install cvmfs-server-scraper`
+
 ## Usage
 
 ````python
