@@ -9,7 +9,7 @@ And then for every repo it finds (that it's not told to ignore), it grabs:
     - cvmfs/<repo>/.cvmfs_status.json
     - cvmfs/<repo>/.cvmfspublished
 
-# Usage
+## Usage
 
 ````python
 #!/usr/bin/env python3
@@ -19,13 +19,15 @@ from cvmfsscraper import scrape, scrape_server
 # server = scrape_server("aws-eu-west1.stratum1.cvmfs.eessi-infra.org")
 
 servers = scrape(
-    servers = [
-        "aws-eu-west1.stratum1.cvmfs.eessi-infra.org",
-        "bgo-no.stratum1.cvmfs.eessi-infra.org",
+    stratum0_servers=[
+        "stratum0.tld",
     ],
-    ignore_repos = [
-        "ci.eessi-hpc.org",
+    stratum1_servers=[
+        "stratum1-no.tld",
+        "stratum1-au.tld",
     ],
+    repos=[],
+    ignore_repos=[],
 )
 
 # Note that the order of servers is undefined.
