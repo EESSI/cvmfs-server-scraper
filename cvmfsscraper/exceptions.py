@@ -10,9 +10,7 @@ log = structlog.getLogger(__name__)
 class CVMFSScraperBaseException(Exception):
     """Base exception for cvmfsscraper."""
 
-    def __init__(
-        self, message: str, original_excption: Exception = None, *args: Any
-    ) -> None:
+    def __init__(self, message: str, original_excption: Exception = None, *args: Any) -> None:
         """Initialize the exception."""
         self.message = message
         self.original_exception = original_excption
