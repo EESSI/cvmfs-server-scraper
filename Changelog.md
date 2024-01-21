@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2024-01-21
+
+### Added
+
+- Add logging support via `structlog``.
+- Updated documentation in README.md.
+
+### Changed
+
+- Allowed `last_gc` for a repo to be optional. Newly created repos may not have this set.
+- Migrated project to ruff only (no black/isort)
+
+### Removed
+
+- Removed printing errors to stderr. Migrated to to logging at the level `error`.
+
+## [0.2.0] - 2024-01-20
+
 ### Added
 
 - Support for server metadata from `repositories.json`, available as the dictionary `server.metadata`
@@ -12,6 +30,7 @@
 ### Fixed
 
 - `fetch_errors` did not properly set path or the error / exception.
+- Fixed github actions (CI) to use pipx to install poetry.
 
 ### Changed
 
@@ -19,6 +38,7 @@
 - `scrape` and `scrape_server` are moved from the package `cvmfsserver.main` to `cvmfsserver`
 - Importing `scrape` or `scrape_server` from `cvmfsserver.main` will print a warning about deprecation.
 - GeoAPI status is now an enum of type GeoAPIStatus, with values `GeoAPIStatus.OK`, `GeoAPIStatus.NOT_FOUND` (no repositories available), `GeoAPIStatus.LOCATION_ERROR` (location could not be determined), and `GeoAPIStatus.NO_RESPONSE` (other error).
+- Updated a number of dependencies.
 
 ### Removed
 
