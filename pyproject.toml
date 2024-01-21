@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cvmfs-server-scraper"
-version = "0.0.1"
+version = "0.0.2"
 description = "Scrape metadata from CVMFS Stratum servers."
 authors = ["Terje Kvernes <terje@kvernes.no>"]
 maintainers = ["Terje Kvernes <terje@kvernes.no>"]
@@ -13,8 +13,7 @@ keywords = ["cvmfs", "scrape", "eessi"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Information Technology",
-    "License :: GPLv2 License",
-    "Operating System :: OS Independent",
+    "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
