@@ -6,7 +6,7 @@
 
 ### Added
 
-- Add logging support via `structlog``.
+- Add logging support via `structlog`.
 - Updated documentation in README.md.
 
 ### Changed
