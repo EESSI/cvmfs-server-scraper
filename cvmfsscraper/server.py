@@ -4,6 +4,8 @@ import json
 from typing import Dict, List
 from urllib import error, request
 
+import structlog
+
 from cvmfsscraper.constants import GeoAPIStatus
 from cvmfsscraper.http_get_models import (
     EndpointClassesType,
@@ -14,7 +16,9 @@ from cvmfsscraper.http_get_models import (
     RepositoryOrReplica,
 )
 from cvmfsscraper.repository import Repository
-from cvmfsscraper.tools import GEOAPI_SERVERS, warn
+from cvmfsscraper.tools import GEOAPI_SERVERS
+
+log = structlog.getLogger(__name__)
 
 
 class CVMFSServer:
@@ -60,6 +64,14 @@ class CVMFSServer:
 
         self.fetch_errors = []
 
+        log.info(
+            "Initializing server",
+            server=server,
+            repos=repos,
+            ignore_repos=ignore_repos,
+            scrape_on_init=scrape_on_init,
+        )
+
         if scrape_on_init:
             self.scrape()
 
@@ -73,6 +85,8 @@ class CVMFSServer:
 
     def scrape(self) -> None:
         """Scrape the server."""
+        log.info("Scraping server", server=self.name)
+
         self.populate_repositories()
 
         if not self.fetch_errors:
@@ -106,6 +120,7 @@ class CVMFSServer:
 
         If the server is down, the list will be empty.
         """
+        log.info("Populating repositories", server=self.name)
         try:
             repodata = self.fetch_repositories_json()
 
@@ -118,7 +133,11 @@ class CVMFSServer:
 
             self._is_down = False
         except Exception as e:  # pragma: no cover
-            warn(f"Populate repository: {self.name}", e)
+            log.error(
+                "Populate repository failure",
+                exc=e,
+                server=self.name,
+            )
             self.fetch_errors.append({"path": self.name, "error": e})
 
     def process_repositories_json(
@@ -185,7 +204,11 @@ class CVMFSServer:
             else:
                 return GeoAPIStatus.LOCATION_ERROR
         except Exception as e:  # pragma: no cover
-            warn("GEOAPI failure", e)
+            log.error(
+                "GeoAPI failure",
+                exc=e,
+                name=self.name,
+            )
             return GeoAPIStatus.NO_RESPONSE
 
     def fetch_repositories_json(self) -> GetCVMFSRepositoriesJSON:
@@ -244,19 +267,42 @@ class CVMFSServer:
         if not isinstance(endpoint, Endpoints):  # type: ignore
             raise TypeError("endpoint must be an Endpoints enum value")
 
+        log.debug(
+            "Fetching endpoint", server=self.name, endpoint=endpoint.name, repo=repo
+        )
+
         geoapi_str = ",".join(geoapi_servers)
         formatted_path = endpoint.path.format(repo=repo, geoapi_str=geoapi_str)
         url = f"{self.url()}/cvmfs/{formatted_path}"
 
         timeout_seconds = 5
         try:
+            log.info("Fetching url", url=url)
             content = request.urlopen(url, timeout=timeout_seconds)
 
             if endpoint in [Endpoints.REPOSITORIES_JSON, Endpoints.CVMFS_STATUS_JSON]:
+                log.debug(
+                    "Fetched JSON endpoint",
+                    server=self.name,
+                    endpoint=endpoint.name,
+                    repo=repo,
+                )
                 content = json.loads(content.read())
             elif endpoint == Endpoints.CVMFS_PUBLISHED:
+                log.debug(
+                    "Fetched .cvmfspublished",
+                    server=self.name,
+                    endpoint=endpoint.name,
+                    repo=repo,
+                )
                 content = GetCVMFSPublished.parse_blob(content.read())
             elif endpoint == Endpoints.GEOAPI:
+                log.debug(
+                    "Fetched geoapi",
+                    server=self.name,
+                    endpoint=endpoint.name,
+                    repo=repo,
+                )
                 indices = [int(x) for x in content.read().decode().split(",")]
                 content = {
                     "host_indices": indices,
@@ -266,7 +312,14 @@ class CVMFSServer:
             return endpoint.model_class(**content)
 
         except error.URLError as e:
-            warn(f"fetch_endpoint: {url}", e)
+            log.error(
+                "Fetch endpoint failure",
+                exc=e,
+                name=self.name,
+                endpoint=endpoint.name,
+                repo=repo,
+                url=url,
+            )
             raise e from e
 
 

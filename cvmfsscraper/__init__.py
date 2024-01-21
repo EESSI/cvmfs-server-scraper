@@ -1,9 +1,41 @@
 """Core of the cvmfsscraper package."""
 
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
+import structlog
+
 from cvmfsscraper.server import CVMFSServer, Stratum0Server, Stratum1Server
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.dev.set_exc_info,
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+        structlog.processors.JSONRenderer(),
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),  # Ensure compatibility
+    cache_logger_on_first_use=True,
+)
+
+
+def set_log_level(level: int) -> None:
+    """Set the log level for the library.
+
+    This function allows the consumer of the library to set the desired log level.
+
+    :param level: The log level to set. This should be a value from the logging module,
+                  such as logging.INFO, logging.DEBUG, etc.
+    """
+    logging.basicConfig(level=level, format="%(message)s")
+    structlog.configure(
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
 
 
 def scrape_server(

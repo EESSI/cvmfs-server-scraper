@@ -2,6 +2,10 @@
 
 from typing import Any
 
+import structlog
+
+log = structlog.getLogger(__name__)
+
 
 class CVMFSScraperBaseException(Exception):
     """Base exception for cvmfsscraper."""
@@ -12,6 +16,15 @@ class CVMFSScraperBaseException(Exception):
         """Initialize the exception."""
         self.message = message
         self.original_exception = original_excption
+
+        log.debug(
+            "Exception raised",
+            exception=self.__class__.__name__,
+            message=message,
+            original_exception=original_excption,
+            args=args,
+        )
+
         super().__init__(message, *args)
 
 

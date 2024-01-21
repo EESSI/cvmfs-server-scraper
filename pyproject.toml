@@ -26,6 +26,7 @@ packages = [{ include = "cvmfsscraper" }, { include = "scripts/*" }]
 [tool.poetry.dependencies]
 python = "^3.8"
 pydantic = "*"
+structlog = "^24"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"

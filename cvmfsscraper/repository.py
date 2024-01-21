@@ -1,12 +1,15 @@
 """A CVMFS repository."""
 from typing import Dict
 
+import structlog
+
 from cvmfsscraper.http_get_models import (
     Endpoints,
     GetCVMFSPublished,
     GetCVMFSStatusJSON,
 )
-from cvmfsscraper.tools import warn
+
+log = structlog.getLogger(__name__)
 
 
 class Repository:
@@ -57,6 +60,8 @@ class Repository:
 
         self.fetch_errors = []
 
+        log.debug("Initalizing repository", server=server.name, name=name, url=url)
+
         self.scrape()
 
     def __str__(self) -> str:
@@ -65,18 +70,33 @@ class Repository:
 
     def scrape(self) -> None:
         """Scrape the repository."""
+        log.debug(
+            "Scraping repository", server=self.server, name=self.name, url=self.path
+        )
         try:
             cvmfspublished = self.fetch_cvmfspublished()
             self.parse_cvmfspublished(cvmfspublished)
         except Exception as exc:
-            warn("CVMFSpublished", exc)
+            log.warn(
+                "Scrape error",
+                exc=exc,
+                server=self.server,
+                name=self.name,
+                url=self.path,
+            )
             self.fetch_errors.append({"path": self.path, "error": exc})
 
         try:
             repo = self.fetch_repository()
             self.parse_status_json(repo)
         except Exception as exc:
-            warn("Repository", exc)
+            log.warn(
+                "Scrape error",
+                exc=exc,
+                server=self.server,
+                name=self.name,
+                url=self.path,
+            )
             self.fetch_errors.append({"path": self.path, "error": exc})
 
     def attribute_mapping(self) -> Dict[str, str]:

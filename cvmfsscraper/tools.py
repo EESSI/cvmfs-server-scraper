@@ -6,6 +6,10 @@ import sys
 import urllib.request
 from typing import Any
 
+import structlog
+
+log = structlog.getLogger(__name__)
+
 GEOAPI_SERVERS = [
     "cvmfs-s1fnal.opensciencegrid.org",
     "cvmfs-stratum-one.cern.ch",
@@ -25,6 +29,8 @@ def deprecated(old: str, new: str) -> None:
 
 def fetch_absolute(obj: object, url: str) -> str:
     """Fetch an absolute URL, handle exceptions."""
+    log.info("Fetching", url=url)
+
     timeout_seconds = 5
     try:
         content = urllib.request.urlopen(url, timeout=timeout_seconds).read()
@@ -34,7 +40,7 @@ def fetch_absolute(obj: object, url: str) -> str:
 
         return content
     except Exception as e:
-        warn(f"fetch_absolute: {url}", e)
+        log.warn("Fetch absolute", url=url, exception=e)
         obj.fetch_errors.append({"path": url, "error": e})
 
     return

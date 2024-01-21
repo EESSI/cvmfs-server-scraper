@@ -4,9 +4,12 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Type, Union
 
+import structlog
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from cvmfsscraper.exceptions import CVMFSValidationError
+
+log = structlog.getLogger(__name__)
 
 
 def hex_field(min_length: int, max_length: int, alias: str):
@@ -23,6 +26,16 @@ def hex_field(min_length: int, max_length: int, alias: str):
 
 class CVMFSBaseModel(BaseModel):
     """Base model for CVMFS models."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize the model."""
+        log.debug(
+            "Initializing pydantic model",
+            model=self.__class__.__name__,
+            kwargs=kwargs,
+        )
+
+        super().__init__(**kwargs)
 
 
 class RepositoryOrReplica(BaseModel):
