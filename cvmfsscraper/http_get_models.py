@@ -57,9 +57,7 @@ class GetGeoAPI(CVMFSBaseModel):
         host_names_input = self.host_names_input
 
         if len(host_names_input) != len(self.host_indices):
-            raise ValueError(
-                "host_indices and host_names_input must be of the same length."
-            )
+            raise ValueError("host_indices and host_names_input must be of the same length.")
 
         return self
 
@@ -107,9 +105,7 @@ class GetCVMFSRepositoriesJSON(CVMFSBaseModel):
         "populate_by_name": True,
     }
 
-    schema_version: int = Field(
-        ..., alias="schema", description="The schema version", gt=0
-    )
+    schema_version: int = Field(..., alias="schema", description="The schema version", gt=0)
     # Stratum0 does not have a last_geodb_update field.
     last_geodb_update: Optional[datetime] = Field(
         None,
@@ -125,9 +121,7 @@ class GetCVMFSRepositoriesJSON(CVMFSBaseModel):
         None, description="List of repositories"
     )
 
-    replicas: Optional[List[RepositoryOrReplica]] = Field(
-        None, description="List of replicas"
-    )
+    replicas: Optional[List[RepositoryOrReplica]] = Field(None, description="List of replicas")
 
     @field_validator("last_geodb_update", mode="before")
     def convert_cvmfs_date_to_datetime(cls, value: str) -> datetime:
@@ -268,9 +262,7 @@ class GetCVMFSPublished(CVMFSBaseModel):
             try:
                 return self.model_dump(by_alias=True)[name_or_alias]
             except KeyError as exc:
-                raise AttributeError(
-                    f"No attribute found for alias '{name_or_alias}'"
-                ) from exc
+                raise AttributeError(f"No attribute found for alias '{name_or_alias}'") from exc
 
     @field_validator(
         "root_cryptographic_hash",

@@ -45,9 +45,7 @@ ENDPOINTS = validate_and_load(data_dir)
 ENDPOINTS["http://example.com/timeout"] = urllib.error.URLError("timeout")
 
 
-def mock_urlopen(
-    url: str, timeout: Union[int, float, None] = None
-) -> Union[Mock, Exception]:
+def mock_urlopen(url: str, timeout: Union[int, float, None] = None) -> Union[Mock, Exception]:
     """Mock urllib.request.urlopen based on a predefined URL mapping.
 
     :param url: The URL to fetch.

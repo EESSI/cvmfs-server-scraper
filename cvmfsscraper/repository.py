@@ -70,9 +70,7 @@ class Repository:
 
     def scrape(self) -> None:
         """Scrape the repository."""
-        log.debug(
-            "Scraping repository", server=self.server, name=self.name, url=self.path
-        )
+        log.debug("Scraping repository", server=self.server, name=self.name, url=self.path)
         try:
             cvmfspublished = self.fetch_cvmfspublished()
             self.parse_cvmfspublished(cvmfspublished)

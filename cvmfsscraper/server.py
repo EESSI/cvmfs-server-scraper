@@ -140,9 +140,7 @@ class CVMFSServer:
             )
             self.fetch_errors.append({"path": self.name, "error": e})
 
-    def process_repositories_json(
-        self, repodata: GetCVMFSRepositoriesJSON
-    ) -> List[Repository]:
+    def process_repositories_json(self, repodata: GetCVMFSRepositoriesJSON) -> List[Repository]:
         """Process the repositories.json file.
 
         Sets self.repos and self.metadata.
@@ -267,9 +265,7 @@ class CVMFSServer:
         if not isinstance(endpoint, Endpoints):  # type: ignore
             raise TypeError("endpoint must be an Endpoints enum value")
 
-        log.debug(
-            "Fetching endpoint", server=self.name, endpoint=endpoint.name, repo=repo
-        )
+        log.debug("Fetching endpoint", server=self.name, endpoint=endpoint.name, repo=repo)
 
         geoapi_str = ",".join(geoapi_servers)
         formatted_path = endpoint.path.format(repo=repo, geoapi_str=geoapi_str)

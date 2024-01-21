@@ -23,7 +23,7 @@ structlog.configure(
 )
 
 
-def set_log_level(level: int) -> None:
+def set_log_level(level: int) -> None:  # pragma: no cover
     """Set the log level for the library.
 
     This function allows the consumer of the library to set the desired log level.
@@ -76,15 +76,11 @@ def scrape(
     with ThreadPoolExecutor(max_workers=10) as executor:
         for server in stratum1_servers:
             processes.append(
-                executor.submit(
-                    scrape_server, server, repos, ignore_repos, is_stratum0=False
-                )
+                executor.submit(scrape_server, server, repos, ignore_repos, is_stratum0=False)
             )
         for server in stratum0_servers:
             processes.append(
-                executor.submit(
-                    scrape_server, server, repos, ignore_repos, is_stratum0=True
-                )
+                executor.submit(scrape_server, server, repos, ignore_repos, is_stratum0=True)
             )
 
     for task in as_completed(processes):
