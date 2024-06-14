@@ -1,14 +1,13 @@
 """Server class for cvmfs-server-metadata."""
 
 import json
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List, Union, cast
 from urllib import error, request
 
 import structlog
 
 from cvmfsscraper.constants import GeoAPIStatus
 from cvmfsscraper.http_get_models import (
-    EndpointClassesType,
     Endpoints,
     GetCVMFSPublished,
     GetCVMFSRepositoriesJSON,
@@ -19,6 +18,9 @@ from cvmfsscraper.repository import Repository
 from cvmfsscraper.tools import GEOAPI_SERVERS
 
 log = structlog.getLogger(__name__)
+
+if TYPE_CHECKING:  # pragma: no cover
+    from cvmfsscraper.http_get_models import BaseModel
 
 
 class CVMFSServer:
@@ -125,11 +127,12 @@ class CVMFSServer:
             repodata = self.fetch_repositories_json()
 
             if repodata:
+                # This should populate self.repositories.
                 self.process_repositories_json(repodata)
 
             if self.fetch_errors:  # pragma: no cover
                 self._is_down = True
-                return []
+                return None
 
             self._is_down = False
         except Exception as e:  # pragma: no cover
@@ -140,7 +143,12 @@ class CVMFSServer:
             )
             self.fetch_errors.append({"path": self.name, "error": e})
 
-    def process_repositories_json(self, repodata: GetCVMFSRepositoriesJSON) -> List[Repository]:
+        if self.is_stratum1():
+            for repo in self.forced_repositories:
+                if repo not in [r.name for r in self.repositories]:
+                    self.repositories.append(Repository(self, repo, "/cvmfs/" + repo))
+
+    def process_repositories_json(self, repodata: GetCVMFSRepositoriesJSON) -> None:
         """Process the repositories.json file.
 
         Sets self.repos and self.metadata.
@@ -153,7 +161,7 @@ class CVMFSServer:
         if repodata.replicas:
             self.server_type = 1
             repos_on_server = repodata.replicas
-        else:
+        elif repodata.repositories:
             self.server_type = 0
             repos_on_server = repodata.repositories
 
@@ -197,6 +205,9 @@ class CVMFSServer:
 
         try:
             geoapi_obj = self.fetch_geoapi(self.repositories[0])
+            if not geoapi_obj:
+                return GeoAPIStatus.NO_RESPONSE
+
             if geoapi_obj.has_order(self.geoapi_order):
                 return GeoAPIStatus.OK
             else:
@@ -209,32 +220,46 @@ class CVMFSServer:
             )
             return GeoAPIStatus.NO_RESPONSE
 
-    def fetch_repositories_json(self) -> GetCVMFSRepositoriesJSON:
+    def fetch_repositories_json(self) -> Union[GetCVMFSRepositoriesJSON, None]:
         """Fetch the repositories JSON file.
 
+        Note: This function will return None if the server is a stratum1 and uses S3 as
+        its backend. In this case, the endpoint is not available.
+
         raises: urlllib.error.URLError (or a subclass thereof) for URL errors.
                 pydantic.ValidationError if the object creation fails.
 
-        returns: A GetCVMFSRepositoriesJSON object.
+        returns: A GetCVMFSRepositoriesJSON object or None
         """
-        return self.fetch_endpoint(Endpoints.REPOSITORIES_JSON)
+        repos = self.fetch_endpoint(Endpoints.REPOSITORIES_JSON)
+        if not repos:
+            return None
 
-    def fetch_geoapi(self, repo: Repository) -> GetGeoAPI:
+        return cast(GetCVMFSRepositoriesJSON, repos)
+
+    def fetch_geoapi(self, repo: Repository) -> Union[GetGeoAPI, None]:
         """Fetch the GeoAPI host ordering.
 
+        Note: This function will return None if the server is a stratum1 and uses S3 as
+        its backend. In this case, the endpoint is not available.
+
         raises: urlllib.error.URLError (or a subclass thereof) for URL errors.
                 pydantic.ValidationError if the object creation fails.
 
-        :returns: A GetGeoAPI object.
+        :returns: A GetGeoAPI object or None
         """
-        return self.fetch_endpoint(Endpoints.GEOAPI, repo=repo.name)
+        geoapi = self.fetch_endpoint(Endpoints.GEOAPI, repo=repo.name)
+        if not geoapi:
+            return None
+
+        return cast(GetGeoAPI, geoapi)
 
     def fetch_endpoint(
         self,
         endpoint: Endpoints,
         repo: str = "data",
-        geoapi_servers: str = GEOAPI_SERVERS,
-    ) -> EndpointClassesType:
+        geoapi_servers: List[str] = GEOAPI_SERVERS,
+    ) -> Union["BaseModel", None]:
         """Fetch and process a specified URL endpoint.
 
         This function reads the content of a specified URL and ether returns a validated
@@ -270,11 +295,12 @@ class CVMFSServer:
         geoapi_str = ",".join(geoapi_servers)
         formatted_path = endpoint.path.format(repo=repo, geoapi_str=geoapi_str)
         url = f"{self.url()}/cvmfs/{formatted_path}"
-
         timeout_seconds = 5
         try:
             log.info("Fetching url", url=url)
-            content = request.urlopen(url, timeout=timeout_seconds)
+            req = request.Request(url)
+            req.add_header("User-Agent", "Mozilla/5.0")
+            content = request.urlopen(req, timeout=timeout_seconds)
 
             if endpoint in [Endpoints.REPOSITORIES_JSON, Endpoints.CVMFS_STATUS_JSON]:
                 log.debug(
@@ -306,6 +332,34 @@ class CVMFSServer:
                 }
 
             return endpoint.model_class(**content)
+
+        except error.HTTPError as e:
+            # If we get a 403 from a stratum1 on the repositories.json endpoint, we are
+            # probably dealing with a server that uses S3 as its backend. In this case
+            # this endpoint is not available, and we should just ignore it.
+            if (
+                e
+                and (endpoint == Endpoints.REPOSITORIES_JSON or endpoint == Endpoints.GEOAPI)
+                and self.server_type == 1
+                and e.code == 404
+            ):
+                log.debug(
+                    "Assuming S3 backend for stratum1",
+                    server=self.name,
+                    endpoint=endpoint.name,
+                    repo=repo,
+                    url=url,
+                )
+                return None
+            log.error(
+                "Fetch endpoint failure",
+                exc=e,
+                name=self.name,
+                endpoint=endpoint.name,
+                repo=repo,
+                url=url,
+            )
+            raise e from e
 
         except error.URLError as e:
             log.error(

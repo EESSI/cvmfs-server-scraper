@@ -1,5 +1,7 @@
 """Test the pydantic models in cvmfsscraper/models.py."""
 
+from __future__ import annotations
+
 import json
 import os
 from copy import deepcopy
@@ -76,7 +78,7 @@ class BaseCVMFSModelTestCase(TestCase):
     """Base model for testing CVMFS models."""
 
     def verify_date_field(
-        self, cls: CVMFSBaseModel, input_data: Dict[str, Any], field: str
+        self, cls: type[CVMFSBaseModel], input_data: Dict[str, Any], field: str
     ) -> None:
         """Verify that a given field in the dataset is validated as a CVMFS date."""
         data = deepcopy(input_data)
@@ -102,11 +104,11 @@ class BaseCVMFSModelTestCase(TestCase):
 
     def verify_str_field(
         self,
-        cls: CVMFSBaseModel,
+        cls: type[CVMFSBaseModel],
         input_data: Dict[str, Any],
         field: str,
-        min_length: int = None,
-        max_length: int = None,
+        min_length: int = 0,
+        max_length: int = 0,
         is_hex: bool = False,
     ) -> None:
         """Verify that a given field in the dataset is validated as a string."""
@@ -142,7 +144,7 @@ class BaseCVMFSModelTestCase(TestCase):
 
     def verify_int_field(
         self,
-        cls: CVMFSBaseModel,
+        cls: type[CVMFSBaseModel],
         input_data: Dict[str, Any],
         field: str,
         require_positive: bool = False,

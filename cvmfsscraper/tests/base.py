@@ -45,7 +45,9 @@ ENDPOINTS = validate_and_load(data_dir)
 ENDPOINTS["http://example.com/timeout"] = urllib.error.URLError("timeout")
 
 
-def mock_urlopen(url: str, timeout: Union[int, float, None] = None) -> Union[Mock, Exception]:
+def mock_urlopen(
+    url: Union[str, urllib.request.Request], timeout: Union[int, float, None] = None
+) -> Union[Mock, Exception]:
     """Mock urllib.request.urlopen based on a predefined URL mapping.
 
     :param url: The URL to fetch.
@@ -56,6 +58,8 @@ def mock_urlopen(url: str, timeout: Union[int, float, None] = None) -> Union[Moc
 
     :returns: Mocked HTTPResponse object with read() method.
     """
+    url = url.full_url if isinstance(url, urllib.request.Request) else url
+
     if url not in ENDPOINTS:
         raise HTTPError(url, 404, "Not Found", {}, None)
 
