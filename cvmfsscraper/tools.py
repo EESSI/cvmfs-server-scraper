@@ -2,6 +2,7 @@
 
 This package is not allowed to import any other packages from cvmfsscraper.
 """
+
 import sys
 import urllib.request
 from typing import Any

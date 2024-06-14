@@ -1,10 +1,15 @@
 """A CVMFS repository."""
+
 from typing import TYPE_CHECKING, Dict, cast
 
 import structlog
 
 from cvmfsscraper.exceptions import CVMFSFetchError
-from cvmfsscraper.http_get_models import Endpoints, GetCVMFSPublished, GetCVMFSStatusJSON
+from cvmfsscraper.http_get_models import (
+    Endpoints,
+    GetCVMFSPublished,
+    GetCVMFSStatusJSON,
+)
 
 log = structlog.getLogger(__name__)
 
@@ -74,7 +79,12 @@ class Repository:
 
     def scrape(self) -> None:
         """Scrape the repository."""
-        log.debug("Scraping repository", server=self.server.name, name=self.name, url=self.path)
+        log.debug(
+            "Scraping repository",
+            server=self.server.name,
+            name=self.name,
+            url=self.path,
+        )
         try:
             cvmfspublished = self.fetch_cvmfspublished()
             self.parse_cvmfspublished(cvmfspublished)

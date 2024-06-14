@@ -1,4 +1,5 @@
 """Pydantic models for CVMFS HTTP responses."""
+
 import re
 from datetime import datetime
 from enum import Enum
