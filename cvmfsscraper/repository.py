@@ -1,15 +1,15 @@
 """A CVMFS repository."""
-from typing import Dict
+from typing import TYPE_CHECKING, Dict, cast
 
 import structlog
 
-from cvmfsscraper.http_get_models import (
-    Endpoints,
-    GetCVMFSPublished,
-    GetCVMFSStatusJSON,
-)
+from cvmfsscraper.exceptions import CVMFSFetchError
+from cvmfsscraper.http_get_models import Endpoints, GetCVMFSPublished, GetCVMFSStatusJSON
 
 log = structlog.getLogger(__name__)
+
+if TYPE_CHECKING:  # pragma: no cover
+    from cvmfsscraper.server import CVMFSServer
 
 
 class Repository:
@@ -37,7 +37,7 @@ class Repository:
         "L": "micro_catalogues",
     }
 
-    def __init__(self, server: object, name: str, url: str):
+    def __init__(self, server: "CVMFSServer", name: str, url: str):
         """Initialize the repository.
 
         :param server: The server object this repository belongs to.
@@ -50,6 +50,10 @@ class Repository:
 
         self.last_gc = None
         self.last_snapshot = None
+
+        self.root_size = 0
+        self.revision = 0
+        self.revision_timestamp = 0
 
         self._repo_status_loaded = 0
         self._cvmfspublished_loaded = 0
@@ -152,7 +156,11 @@ class Repository:
 
         :returns: A GetCVMFSPublished object.
         """
-        return self.server.fetch_endpoint(Endpoints.CVMFS_PUBLISHED, self.name)
+        cvmfspublished = self.server.fetch_endpoint(Endpoints.CVMFS_PUBLISHED, self.name)
+        if not cvmfspublished:
+            raise CVMFSFetchError("Failed to fetch .cvmfspublished")
+
+        return cast(GetCVMFSPublished, cvmfspublished)
 
     def fetch_repository(self) -> GetCVMFSStatusJSON:
         """Fetch a repository by name.
@@ -162,4 +170,8 @@ class Repository:
 
         :returns: GetCVMFSStatusJSON object.
         """
-        return self.server.fetch_endpoint(Endpoints.CVMFS_STATUS_JSON, self.name)
+        cvmfsstatus = self.server.fetch_endpoint(Endpoints.CVMFS_STATUS_JSON, self.name)
+        if not cvmfsstatus:
+            raise CVMFSFetchError("Failed to fetch .cvmfs_status.json")
+
+        return cast(GetCVMFSStatusJSON, cvmfsstatus)

@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 """Proof of concept EESSI test script."""
 
-from cvmfsscraper import scrape
+import logging
+
+from cvmfsscraper import scrape, set_log_level
+
+set_log_level(logging.WARNING)
 
 # server = scrape_server("aws-eu-west1.stratum1.cvmfs.eessi-infra.org")
 
 servers = scrape(
-    stratum0_servers=[
-        "rug-nl.stratum0.cvmfs.eessi-infra.org",
-    ],
+    stratum0_servers=["rug-nl-s0.eessi.science"],
     stratum1_servers=[
-        "aws-eu-west1.stratum1.cvmfs.eessi-infra.org",
-        "azure-us-east1.stratum1.cvmfs.eessi-infra.org",
-        "bgo-no.stratum1.cvmfs.eessi-infra.org",
-        "rug-nl.stratum1.cvmfs.eessi-infra.org",
+        "aws-eu-central-s1.eessi.science",
+        #        "azure-us-east-s1.eessi.science",
+        "aws-eu-west-s1-sync.eessi.science",
     ],
-    repos=[],
+    # We need to force repos due to the sync server using S3 as its backend.
+    # S3 does not support reporting the list of repositories.
+    repos=["software.eessi.io", "riscv.eessi.io", "dev.eessi.io"],
     ignore_repos=[
         "bla.eessi-hpc.org",
         "bob.eessi-hpc.org",
@@ -32,7 +35,7 @@ for server in servers:
         print("   - " + key + ": " + value)
     print("  Repositories: ")
     for repo in server.repositories:
-        print("   - " + repo.name)
+        print("   - " + repo.name + " (" + repo.path + ")")
         print(f"    : Root size: {repo.root_size}")
         print(f"    : Revision: {repo.revision}")
         print(f"    : Revision timestamp: {repo.revision_timestamp}")

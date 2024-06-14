@@ -309,5 +309,8 @@ class Endpoints(Enum):
 # Dynamically creating this list based on the Endpoints enum values
 # is not supported by mypy et al, so we have to do it manually.
 EndpointClassesType = Union[
-    GetCVMFSPublished, GetCVMFSRepositoriesJSON, GetCVMFSStatusJSON, GetGeoAPI
+    GetCVMFSPublished,
+    GetCVMFSRepositoriesJSON,
+    GetCVMFSStatusJSON,
+    GetGeoAPI,
 ]

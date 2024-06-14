@@ -48,6 +48,12 @@ for repo in servers[0].repositories:
     print("Last snapshot: " + str(repo.last_snapshot))
 ````
 
+Note that if you are using a Stratum1 server with S3 as its backend, you need to set repos explicitly.
+This is because the S3 backend does not have a `cvmfs/info/v1/repositories.json` file. Also, the GeoAPI
+status will be `NOT_FOUND` for these servers.
+
+````python
+
 # Data structure
 
 ## Server
