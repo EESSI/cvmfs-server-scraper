@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.0.4] - 2024-06-15
+
+### Added
+
+- Added support for stratum1 servers to use S3 as a backend. If any server has S3 as a backend, one has to set the `repos` for the scraping to ensure that the repositories in question are scraped. This is due to the fact that the S3 backend does not offer a repository list to clients (or the scraper). Also note that GeoAPI is not supported for S3 backends and will always return `GeoAPIStatus.NO_RESPONSE`.
+
 ## [0.0.3] - 2024-01-21
 
 ### Added

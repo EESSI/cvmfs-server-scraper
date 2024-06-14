@@ -1,4 +1,5 @@
 """Base testing framework for cvmfsscraper tests."""
+
 import os
 import urllib.error
 import urllib.request
